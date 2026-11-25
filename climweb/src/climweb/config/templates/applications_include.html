@@ -1,0 +1,16 @@
+{% load i18n %}
+
+<div class="app-section">
+
+  <div class="app-header">
+    <p class="app-eyebrow">{% translate "Tools & Apps" %}</p>
+    <h2 class="app-title">{% translate "Applications" %}</h2>
+  </div>
+
+  <div class="app-grid">
+    {% for app in applications %}
+      {% include "application_card.html" with application=app.application %}
+    {% endfor %}
+  </div>
+
+</div>

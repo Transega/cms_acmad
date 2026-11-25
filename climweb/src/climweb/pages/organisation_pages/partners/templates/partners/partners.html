@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load wagtailcore_tags static wagtailimages_tags lazyimages_tags i18n  %}
+
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/partners.css' %}">
+{% endblock %}
+
+{% block body_class %}partners-page{% endblock %}
+
+{% block content %}
+    <main>
+        {% include 'hero.html' with page=page show_fallback=True %}
+        {% if page.introduction_title or page.introduction_text or page.introduction_image %}
+          {% if page.introduction_image %}
+            <section class="nmhs-work introduction-section">
+                <div class="work container">
+                    {% include 'service_introduction.html' with page=page %}
+                </div>
+            </section>
+        {% else %}
+            <section class="nmhs-work introduction-section">
+                <div class="work container">
+                    <h2 class="title is-3">
+                        {{ page.introduction_title }}
+                    </h2>
+                    <div class="intro-description format-text">
+                        {{ page.introduction_text|richtext }}
+                    </div>
+                </div>
+            </section>
+          {% endif %}
+        {% endif %}
+        {% if partners %}
+            <section class="section">
+            <div class="container py-5">
+
+                <div class="mb-5">
+                <p class="is-uppercase has-text-weight-bold is-size-8 mb-1"
+                    style="color:var(--primary-color) ; letter-spacing:0.08em;">
+                    {% translate "Collaborators" %}
+                </p>
+                <h2 class="title is-3">{% translate "Our Partners" %}</h2>
+                <p class="subtitle is-6 has-text-grey">
+                    {% translate "Working alongside leading institutions to advance climate science and resilience." %}
+                </p>
+                </div>
+
+                <div class="columns is-multiline is-mobile is-centered partners-list">
+                {% for partner in partners %}
+                    {% if partner.logo %}
+                    <div class="column is-4-mobile is-3-tablet is-2-desktop">
+                        <a href="{% if partner.link %}{{ partner.link }}{% endif %}"
+                        target="{% if partner.link %}_blank{% else %}_self{% endif %}"
+                        rel="noopener"
+                        class="partner-card"
+                        title="{{ partner.name }}">
+                        <figure class="image partner-logo-figure">
+                            {% image partner.logo original as p_logo %}
+                            <img class="progressive__img progressive--not-loaded partner-logo-img"
+                                data-progressive="{{ p_logo.url }}"
+                                src="{% lazy_image_url p_logo %}"
+                                alt="{{ partner.name }}" />
+                        </figure>
+                        <span class="partner-name">{{ partner.name }}</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                </div>
+
+                {% if settings.base.ImportantPages.all_partners_page %}
+                <div class="has-text-centered mt-5">
+                    
+
+                    <a class="more-partners" href="{{ settings.base.ImportantPages.all_partners_page.url }}">
+                        {% translate "More Partners" %}
+                        </a>
+                </div>
+                {% endif %}
+
+            </div>
+            </section>
+        {% endif %}
+        
+
+        {% if page.partners_cta_title or page.partners_cta_image or page.partners_cta_text %}
+            <section class="nmhs-work partners-cta-section ">
+                <div class="container work">
+                    {% include 'partners/partners_cta.html' with page=page %}
+                </div>
+            </section>
+        {% endif %}
+    </main>
+{% endblock %}

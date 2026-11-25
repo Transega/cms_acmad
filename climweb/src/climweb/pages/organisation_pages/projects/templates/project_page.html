@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% load static wagtailcore_tags wagtailimages_tags wagtailsettings_tags lazyimages_tags i18n wagtailiconchooser_tags %}
+{% get_settings use_default_site=True %}
+{% wagtail_site as current_site %}
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/jquery.skeleton.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/services_common.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/project_detail.css' %}">
+     {% if page.youtube_playlist %}
+        <link rel="stylesheet" type="text/css" href="{% static 'css/video_include.css' %}">
+    {% endif %}
+{% endblock %}
+
+{% block body_class %}project-page"{% endblock %}
+
+{% block content %}
+    <main class="is-index">
+        {% include 'hero.html' with page=page %}
+        {% if page.introduction_title or page.introduction_text or page.introduction_image %}
+          {% if page.introduction_image %}
+            <section class="nmhs-work introduction-section">
+                <div class="work container">
+                    {% include 'service_introduction.html' with page=page %}
+                </div>
+            </section>
+        {% else %}
+            <section class="nmhs-work introduction-section">
+                <div class="work container">
+                    <h2 class="title is-3">
+                        {{ page.introduction_title }}
+                    </h2>
+
+                    <div class="intro-description format-text">
+                        {{ page.introduction_text|richtext }}
+                    </div>
+                </div>
+            </section>
+          {% endif %}
+        {% endif %}
+        {% if page.goals_block %}
+
+        <section class="ac-section">
+           
+        <div class="container">
+            <div class="columns is-centered">
+            <div class="column is-three-quarters-desktop is-full-mobile">
+
+                {% if page.goals_title %}
+                <h2 class="ac-title has-text-centered">{{ page.goals_title }}</h2>
+                {% endif %}
+
+                <div class="ac-wrap" id="{{ block.id }}">
+                {% for block in page.goals_block %}
+                    {% if forloop.first %}
+                    {% include_block block with is_first=True %}
+                    {% else %}
+                    {% include_block block with is_first=False %}
+                    {% endif %}
+                {% endfor %}
+                </div>
+
+            </div>
+            </div>
+        </div>
+        </section>
+           
+        {% endif %}
+
+        {% if page.news %}
+            <section class="project-latest-publications-section">
+                <div class="container">
+                    <h2 class="section-title">
+                        {% translate "Latest News" %}
+                    </h2>
+                    {% include 'card_items_inline_include.html' with items=page.news more_link=settings.base.ImportantPages.all_news_page.url more_link_title="More News" %}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if page.project_materials %}
+            <section class="section">
+                <div class="container">
+
+                    <div class="mat-header has-text-centered">
+                    <p class="mat-eyebrow">{% translate "Resources" %}</p>
+                    <h2 class="mat-title">{% translate "Additional Materials" %}</h2>
+                    </div>
+
+                    <div class="columns is-multiline">
+                    {% for category in page.project_materials %}
+                        <div class="column is-half-desktop is-full-mobile">
+                        {% include_block category %}
+                        </div>
+                    {% endfor %}
+                    </div>
+
+                </div>
+            </section>
+        {% endif %}
+
+
+        {% if page.feature_block %}
+            <section class="feature-blocks-section">
+                <div class="container">
+                {% include 'feature_block_section.html' with feature_blocks=page.feature_block %}
+
+                </div>
+
+            </section>
+        {% endif %}
+
+        {% if page.youtube_playlist %}
+            <section class="section videos" id="videoSection">
+                <div class="container is-align-content-center">
+                    <div class="my-6">
+                        <p class="is-uppercase has-text-weight-bold is-size-8 mb-1" style="color:var(--primary-color); letter-spacing:0.08em;">
+                            {% translate "Latest Media" %}
+                        </p>
+                        <h2 class="title is-3">{% translate "Highlights & Videos" %}</h2>
+                        </div>                    
+                        {% include 'videos_skeleton.html' %}
+                </div>
+            </section>
+        {% endif %}
+
+
+        {% if page.events.all %}
+            <section>
+                <div class="container">
+                    <h2 class="title is-3">
+                        {% translate "Latest Events" %}
+                    </h2>
+                    {% include 'events_include.html' with events=page.events %}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if page.publications %}
+            <section class="project-latest-publications-section">
+                <h2 class="section-title has-text-centered">
+                    {% translate "Latest Updates" %}
+                </h2>
+                <div class="container">
+                    <div class="columns is-multiline is-mobile is-centered">
+                        {% for publication in page.publications %}
+                            <div class="column is-one-quarter-desktop is-full-mobile">
+                                {% include 'update_card_include.html' with card=publication.card_props show_type=True %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+        {% endif %}
+
+        {% if page.partners.all %}
+            <section class="section">
+            <div class="container py-5">
+
+                <div class="mb-5">
+                <p class="is-uppercase has-text-weight-bold is-size-8 mb-1"
+                    style="color:var(--primary-color) ; letter-spacing:0.08em;">
+                    {% translate "Collaborators" %}
+                </p>
+                <h2 class="title is-3">{% translate "Our Partners" %}</h2>
+                <p class="subtitle is-6 has-text-grey">
+                    {% translate "Working alongside leading institutions to advance climate science and resilience." %}
+                </p>
+                </div>
+
+                <div class="columns is-multiline is-mobile partners-list">
+                {% for partner in page.partners.all %}
+                    <div class="column is-4-mobile is-3-tablet is-2-desktop">
+                        <a href="{% if partner.link %}{{ partner.link }}{% endif %}"
+                        target="{% if partner.link %}_blank{% else %}_self{% endif %}"
+                        rel="noopener"
+                        class="partner-card"
+                        title="{{ partner.name }}">
+                        <figure class="image partner-logo-figure">
+                            {% image partner.logo original as p_logo %}
+                            <img class="progressive__img progressive--not-loaded partner-logo-img"
+                                data-progressive="{{ p_logo.url }}"
+                                src="{% lazy_image_url p_logo %}"
+                                alt="{{ partner.name }}" />
+                        </figure>
+                        <span class="partner-name">{{ partner.name }}</span>
+                        </a>
+                    </div>
+                {% endfor %}
+                </div>
+
+                {% if settings.base.ImportantPages.all_partners_page %}
+                <div class="has-text-centered mt-5">
+                    
+
+                    <a class="more-partners" href="{{ settings.base.ImportantPages.all_partners_page.url }}">
+                        {% translate "More Partners" %}
+                        </a>
+                </div>
+                {% endif %}
+
+            </div>
+            </section>
+        {% endif %}
+    </main>
+{% endblock content %}
+
+{% block extra_js %}
+    <script src="{% static 'js/jquery.scheletrone.js' %}"></script>
+    <script src="{% static 'js/jquery.event.move.js' %}"></script>
+    <script src="{% static 'js/jquery.twentytwenty.js' %}"></script>
+    
+    <script>
+        // If on smaller screens, collapse all filter items
+        const windowWidth = $(window).width();
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.ac-wrap').forEach(function (wrap) {
+                wrap.querySelectorAll('.ac-header').forEach(function (header) {
+                header.addEventListener('click', function () {
+                    const item = header.closest('.ac-item');
+                    const isOpen = item.classList.contains('ac-item--open');
+
+                    // close all items in this wrap
+                    wrap.querySelectorAll('.ac-item').forEach(function (i) {
+                    i.classList.remove('ac-item--open');
+                    });
+
+                    // open clicked if it was closed
+                    if (!isOpen) {
+                    item.classList.add('ac-item--open');
+                    }
+                });
+                });
+            });
+        });
+        
+        const page_youtube_playlist =
+            {{ page.youtube_playlist|yesno:'true,false' }}
+
+        if (page_youtube_playlist) {
+
+            $('#videoWrapper').scheletrone({
+                onComplete: function () {
+                    $.ajax({
+                        url: '{{ current_site.root_url }}/api/videos/{{ page.youtube_playlist.pk }}',
+                        dataType: "html",
+                        success: function (data) {
+                            // if we have videos append them, else hide whole section
+                            if (data.length > 1) {
+                                $('#videoWrapper').html('').append(data).ready();
+                            } else {
+                                $('#videoSection').hide()
+                            }
+                        },
+                        error: function () {
+                            $('#videoSection').remove()
+                        }
+                    });
+                }
+            });
+        }
+
+         if (page_youtube_playlist) {
+                const url = "{{ youtube_playlist_url }}";
+                console.log("Fetching videos from URL:", url);
+                const $videoWrapper = $('#videoWrapper');
+
+                if ($videoWrapper.length) {
+                    $videoWrapper.scheletrone({
+                        onComplete: function () {
+                            $.ajax({
+                                url: url,
+                                dataType: "html",
+                                success: function (data) {
+                                    // if we have videos append them, else hide whole section
+                                    if (data) {
+                                        $('#videoWrapper').html('').append(data).ready();
+                                    } else {
+                                        $('#videoSection').remove()
+                                    }
+                                },
+                                error: function () {
+                                    $('#videoSection').remove()
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+
+
+    </script>
+{% endblock %}
+
+
+

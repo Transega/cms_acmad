@@ -1,0 +1,269 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: nmhs-cms\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-11 07:47+0300\n"
+"PO-Revision-Date: 2026-06-22 11:39\n"
+"Last-Translator: \n"
+"Language-Team: Arabic\n"
+"Language: ar_SA\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5);\n"
+"X-Crowdin-Project: nmhs-cms\n"
+"X-Crowdin-Project-ID: 672958\n"
+"X-Crowdin-Language: ar\n"
+"X-Crowdin-File: /climweb/src/climweb/config/locale/en/LC_MESSAGES/django.po\n"
+"X-Crowdin-File-ID: 1296\n"
+
+#: climweb/src/climweb/config/templates/404.html:20
+msgid "Page not found"
+msgstr "الصفحة غير موجودة"
+
+#: climweb/src/climweb/config/templates/404.html:24
+msgid "Sorry, this page could not be found"
+msgstr "عذراً، لم يتم العثور على هذه الصفحة"
+
+#: climweb/src/climweb/config/templates/404.html:28
+#: climweb/src/climweb/config/templates/500.html:26
+msgid "Back to Home Page"
+msgstr "العودة إلى الصفحة الرئيسية"
+
+#: climweb/src/climweb/config/templates/500.html:19
+msgid "Internal server error"
+msgstr "خطأ داخلي في الخادم"
+
+#: climweb/src/climweb/config/templates/500.html:22
+msgid "Sorry, there seems to be an error. Please try again soon"
+msgstr "عذراً، يبدو أن هناك خطأ ما. يرجى المحاولة مرة أخرى قريباً"
+
+#: climweb/src/climweb/config/templates/applications_include.html:6
+msgid "Tools & Apps"
+msgstr "الأدوات والتطبيقات"
+
+#: climweb/src/climweb/config/templates/applications_include.html:7
+#| msgid "Go to publication"
+msgid "Applications"
+msgstr ""
+
+#: climweb/src/climweb/config/templates/applications_include.html:37
+msgid "Open App"
+msgstr "افتح التطبيق"
+
+#: climweb/src/climweb/config/templates/axes/lockout.html:4
+#: climweb/src/climweb/config/templates/wagtail_2fa/otp_form.html:4
+#: climweb/src/climweb/config/templates/wagtail_2fa/otp_form.html:52
+msgid "Sign in"
+msgstr "تسجيل الدخول"
+
+#: climweb/src/climweb/config/templates/axes/lockout.html:10
+msgid "Account Locked"
+msgstr "الحساب مغلق"
+
+#: climweb/src/climweb/config/templates/axes/lockout.html:16
+msgid "Your account has been locked due to multiple failed login attempts. Please try again later."
+msgstr "لقد تم قفل حسابك بسبب عدة محاولات تسجيل دخول فاشلة. يرجى المحاولة مرة أخرى في وقت لاحق."
+
+#: climweb/src/climweb/config/templates/axes/lockout.html:20
+msgid "Back to sign in"
+msgstr "العودة لتسجيل الدخول"
+
+#: climweb/src/climweb/config/templates/axes/lockout.html:23
+#| msgid ""
+#| "You account has been locked due to multiple failed login attempts. Please "
+#| "contact our support team for assistance."
+msgid "Your account has been locked due to multiple failed login attempts. Please contact our support team for assistance."
+msgstr "لقد تم قفل حسابك بسبب عدة محاولات تسجيل دخول فاشلة. يرجى المحاولة مرة أخرى في وقت لاحق."
+
+#: climweb/src/climweb/config/templates/axes/lockout.html:31
+#: climweb/src/climweb/config/templates/navigation/app_navbar.html:86
+#: climweb/src/climweb/config/templates/navigation/navbar.html:84
+#: climweb/src/climweb/config/templates/navigation/navbar.html:168
+msgid "Contact us"
+msgstr "اتصل بنا"
+
+#: climweb/src/climweb/config/templates/bulma/forms/field.html:109
+msgid "Choose a file"
+msgstr "اختر ملفًا"
+
+#: climweb/src/climweb/config/templates/bulma/forms/field.html:113
+msgid "Please select a file"
+msgstr "يرجى اختيار ملف"
+
+#: climweb/src/climweb/config/templates/empty_items.html:7
+msgid "Nothing listed at the moment"
+msgstr "لا يوجد شيء مدرج حالياً"
+
+#: climweb/src/climweb/config/templates/empty_state_include.html:24
+msgid "No data found"
+msgstr "لم يتم العثور على بيانات"
+
+#: climweb/src/climweb/config/templates/events_include.html:8
+msgid "Upcoming"
+msgstr "القادمة"
+
+#: climweb/src/climweb/config/templates/events_include.html:9
+#| msgid "More Events"
+msgid "Events"
+msgstr ""
+
+#: climweb/src/climweb/config/templates/events_include.html:13
+msgid "All events"
+msgstr "جميع الأحداث"
+
+#: climweb/src/climweb/config/templates/featured_item_include.html:28
+msgid "Featured"
+msgstr "مميز"
+
+#: climweb/src/climweb/config/templates/featured_item_include.html:45
+msgid "Tags"
+msgstr "وسوم"
+
+#: climweb/src/climweb/config/templates/featured_item_include.html:59
+msgid "Read More"
+msgstr "اقرأ المزيد"
+
+#: climweb/src/climweb/config/templates/form_thank_you_landing.html:33
+msgid "We have received your submission. Thank you!"
+msgstr "لقد استلمنا طلبك. شكراً لك!"
+
+#: climweb/src/climweb/config/templates/form_thank_you_landing.html:44
+msgid "Back to Homepage"
+msgstr "لعودة إلى الصفحة الرئيسية"
+
+#: climweb/src/climweb/config/templates/modeladmin/index.html:33
+msgid "Download XLSX"
+msgstr "تنزيل XLSX"
+
+#: climweb/src/climweb/config/templates/modeladmin/index.html:39
+msgid "Download CSV"
+msgstr "تنزيل  CSV"
+
+#: climweb/src/climweb/config/templates/modeladmin/index.html:62
+msgid "Filter"
+msgstr "تصفية"
+
+#: climweb/src/climweb/config/templates/modeladmin/index.html:74
+#, python-format
+msgid "No %(name)s have been created yet. One of the following must be created before you can add any %(name)s:"
+msgstr "لم يتم إنشاء %(name)s حتى الآن. يجب إنشاء واحد مما يلي قبل أن تتمكن من إضافة أي %(name)s:"
+
+#: climweb/src/climweb/config/templates/modeladmin/index.html:79
+#, python-format
+msgid "No %(name)s have been created yet."
+msgstr "لم يتم إنشاء أي %(name)s بعد."
+
+#: climweb/src/climweb/config/templates/modeladmin/index.html:81
+#, python-format
+msgid "Why not <a href=\"%(url)s\">add one</a>?"
+msgstr "لماذا لا <a href=\"%(url)s\">تضيف واحداً</a>؟"
+
+#: climweb/src/climweb/config/templates/modeladmin/index.html:96
+msgid "Pagination"
+msgstr "ترقيم الصفحات"
+
+#: climweb/src/climweb/config/templates/modeladmin/index.html:97
+#, python-format
+msgid "Page %(current_page)s of %(num_pages)s."
+msgstr "صفحة %(current_page)s من %(num_pages)s"
+
+#: climweb/src/climweb/config/templates/navigation/app_navbar.html:26
+#: climweb/src/climweb/config/templates/navigation/navbar.html:32
+#: climweb/src/climweb/config/templates/navigation/navbar.html:156
+msgid "Alerts"
+msgstr "تنبيهات"
+
+#: climweb/src/climweb/config/templates/navigation/app_navbar.html:35
+#: climweb/src/climweb/config/templates/navigation/navbar.html:41
+#: climweb/src/climweb/config/templates/navigation/navbar.html:162
+#: climweb/src/climweb/config/templates/videos_include.html:39
+#: climweb/src/climweb/config/templates/videos_include.html:88
+msgid "Subscribe"
+msgstr "اشتراك"
+
+#: climweb/src/climweb/config/templates/navigation/app_navbar.html:45
+#: climweb/src/climweb/config/templates/navigation/navbar.html:49
+msgid "Language"
+msgstr "لغة"
+
+#: climweb/src/climweb/config/templates/navigation/app_navbar.html:76
+#: climweb/src/climweb/config/templates/navigation/navbar.html:72
+#: climweb/src/climweb/config/templates/navigation/navbar.html:76
+msgid "Search"
+msgstr "يبحث"
+
+#: climweb/src/climweb/config/templates/navigation/app_navbar.html:93
+#: climweb/src/climweb/config/templates/navigation/navbar.html:91
+#: climweb/src/climweb/config/templates/navigation/navbar.html:174
+msgid "Feedback"
+msgstr "ملاحظات"
+
+#: climweb/src/climweb/config/templates/navigation/footer.html:98
+msgid "Powered by Climweb"
+msgstr "بدعم من Climweb"
+
+#: climweb/src/climweb/config/templates/projects_include.html:7
+msgid "Projects"
+msgstr "المشاريع"
+
+#: climweb/src/climweb/config/templates/projects_include.html:15
+msgid "More Projects"
+msgstr "المزيد من المشاريع"
+
+#: climweb/src/climweb/config/templates/update_card_include.html:75
+msgid "Read more"
+msgstr "اقرأ المزيد"
+
+#: climweb/src/climweb/config/templates/videos_include.html:29
+#: climweb/src/climweb/config/templates/videos_include.html:77
+#| msgid "Published on : %(updated_on)s"
+msgid "Published on: %(updated_on)s"
+msgstr ""
+
+#: climweb/src/climweb/config/templates/wagtail_2fa/otp_form.html:12
+msgid "Enter your two-factor authentication code"
+msgstr "أدخل رمز المصادقة الثنائية الخاص بك"
+
+#: climweb/src/climweb/config/templates/wagtail_2fa/otp_form.html:21
+msgid "Invalid code"
+msgstr "رمز غير صالح"
+
+#: climweb/src/climweb/config/templates/wagtail_2fa/otp_form.html:52
+msgid "Signing in…"
+msgstr "جاري تسجيل الدخول..."
+
+#: climweb/src/climweb/config/templates/wagtail_2fa/otp_form.html:56
+msgid "Sign out"
+msgstr "تسجيل الخروج"
+
+#: climweb/src/climweb/config/templates/wagtailadmin/home.html:5
+msgid "Welcome to"
+msgstr "مرحبا بك في"
+
+#: climweb/src/climweb/config/templates/wagtailadmin/login.html:6
+msgid "Sign in to"
+msgstr "قم بتسجيل الدخول إلى"
+
+#~ msgid "View"
+#~ msgstr "View"
+
+#~ msgid "SUBSCRIBE"
+#~ msgstr "SUBSCRIBE"
+
+#, python-format
+#~ msgid "Download - %(file_size)s"
+#~ msgstr "Download - %(file_size)s"
+
+#~ msgid "Additional Materials"
+#~ msgstr "Additional Materials"
+
+#~ msgid "Download document"
+#~ msgstr "Download document"
+
+#~ msgid "NMHS ClimWeb"
+#~ msgstr "NMHS ClimWeb"
+
+#~ msgid "What we do"
+#~ msgstr "What we do"
+

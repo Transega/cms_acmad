@@ -1,0 +1,1089 @@
+import uuid
+from itertools import chain
+
+from django.conf import settings
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.core.cache import cache
+from django.core.mail import mail_admins
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db import models, transaction
+from django.forms import CheckboxSelectMultiple
+from django.template.defaultfilters import truncatechars, date
+from django.template.response import TemplateResponse
+from django.utils import timezone
+from django.utils.functional import cached_property
+from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _, gettext
+from loguru import logger
+from modelcluster.fields import ParentalKey, ParentalManyToManyField
+from modelcluster.models import ClusterableModel
+from timezone_field import TimeZoneField
+from wagtail.admin.panels import (FieldPanel, InlinePanel, MultiFieldPanel, )
+from wagtail.admin.panels import TabbedInterface, ObjectList
+from wagtail.contrib.forms.forms import WagtailAdminFormPageForm
+from wagtail.contrib.forms.models import AbstractEmailForm, AbstractFormField, FORM_FIELD_CHOICES
+from wagtail.contrib.settings.models import BaseSiteSetting
+from wagtail.contrib.settings.registry import register_setting
+from wagtail.fields import StreamField, RichTextField
+from wagtail.models import Page
+from wagtail.snippets.models import register_snippet
+from wagtail.utils.decorators import cached_classmethod
+from wagtailcaptcha.models import WagtailCaptchaEmailForm
+from wagtailiconchooser.widgets import IconChooserWidget
+from wagtailmailchimp.models import AbstractMailchimpIntegrationForm
+from wagtailzoom.models import AbstractZoomIntegrationForm
+
+from climweb.base import blocks
+from climweb.base.forms import (FormImageField, FormDocumentField, CustomSubmissionsListView,
+                                CustomWagtailCaptchaFormBuilder, effective_clean_name)
+from climweb.base.mixins import (MetadataPageMixin, FormPageReviewSettingsMixin, FormPageClosingDateMixin,
+                                 FormFieldMaxLengthMixin, FormCleanNameFallbackMixin)
+from climweb.base.models import FormFileSubmission
+from climweb.base.seo_utils import get_homepage_meta_image, get_homepage_meta_description
+from climweb.base.utils import (
+    get_pytz_gmt_offset_str,
+    paginate,
+    query_param_to_list,
+    get_first_non_empty_p_string,
+    generate_title_from_filename
+)
+from .blocks import PanelistBlock, EventSponsorBlock, SessionBlock
+
+SUMMARY_RICHTEXT_FEATURES = getattr(settings, "SUMMARY_RICHTEXT_FEATURES")
+
+
+@register_setting(icon="calendar", name="google-meet-settings")
+class GoogleMeetSettings(BaseSiteSetting):
+    """Per-site, non-secret configuration for Google Calendar/Meet.
+
+    The service-account private key is intentionally supplied through the
+    GOOGLE_MEET_SERVICE_ACCOUNT_FILE deployment setting rather than stored in
+    the database or exposed in Wagtail admin.
+    """
+
+    enabled = models.BooleanField(
+        default=False,
+        verbose_name=_("Enable Google Meet integration"),
+    )
+    organizer_email = models.EmailField(
+        blank=True,
+        verbose_name=_("Google Workspace organizer email"),
+        help_text=_(
+            "The Workspace user the service account impersonates. Meetings "
+            "and calendar events are owned by this account."
+        ),
+    )
+    calendar_id = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Google Calendar ID"),
+        help_text=_("Leave blank to use the organizer's primary calendar."),
+    )
+    participant_email_subject = models.CharField(
+        max_length=255,
+        blank=True,
+        default="You're registered: {event_title}",
+        verbose_name=_("Participant email subject"),
+        help_text=_("You may use {event_title} in the subject."),
+    )
+
+    panels = [
+        FieldPanel("enabled"),
+        FieldPanel("organizer_email"),
+        FieldPanel("calendar_id"),
+        FieldPanel("participant_email_subject"),
+    ]
+
+    class Meta:
+        verbose_name = _("Google Meet settings")
+
+    def clean(self):
+        super().clean()
+        if self.enabled and not self.organizer_email:
+            raise ValidationError({
+                "organizer_email": _(
+                    "An organizer email is required when Google Meet is enabled."
+                )
+            })
+
+
+@register_snippet
+class EventType(models.Model):
+    event_type = models.CharField(max_length=255, verbose_name=_("Event type"))
+    icon = models.CharField(max_length=100, null=True, blank=True)
+    thumbnail = models.ForeignKey(
+        'wagtailimages.Image',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        help_text=_("Thumbnail/image for this type of event.")
+    )
+    
+    def __str__(self):
+        return self.event_type
+    
+    panels = [
+        FieldPanel('event_type'),
+        FieldPanel('icon', widget=IconChooserWidget),
+        FieldPanel('thumbnail'),
+    ]
+    
+    class Meta:
+        verbose_name = _("Event Type")
+
+
+class EventIndexPage(MetadataPageMixin, Page):
+    template = 'event_index_page.html'
+    subpage_types = ['events.EventPage']
+    parent_page_types = ['home.HomePage']
+    max_count = 1
+    show_in_menus = True
+    
+    events_per_page = models.PositiveIntegerField(default=6, validators=[
+        MinValueValidator(6),
+        MaxValueValidator(20),
+    ], help_text=_("How many events should be visible on the all events section ?"),
+                                                  verbose_name=_("Events per page"))
+    
+    content_panels = Page.content_panels + [
+        # *AbstractBannerPage.content_panels,
+        MultiFieldPanel(
+            [
+                FieldPanel('events_per_page'),
+            ],
+            heading=_("Other Settings"),
+        ), ]
+    
+    class Meta:
+        verbose_name = _("Event Index Page")
+    
+    def get_meta_image(self):
+        meta_image = super().get_meta_image()
+        
+        if not meta_image:
+            meta_image = get_homepage_meta_image(self.get_site())
+        
+        return meta_image
+    
+    def get_meta_description(self):
+        meta_description = super().get_meta_description()
+        
+        if not meta_description:
+            meta_description = get_homepage_meta_description(self.get_site())
+        
+        return meta_description
+    
+    @property
+    def filters(self):
+        event_types = EventType.objects.all()
+        
+        years = EventPage.objects.dates("date_from", "year")
+        
+        return {'event_types': event_types, 'year': years}
+    
+    def get_featured_events(self):
+        return self.all_events.filter(
+            models.Q(date_to__gte=timezone.now())
+            | models.Q(date_to__isnull=True, date_from__gte=timezone.now()),
+            is_archived=False,
+        ).order_by('date_from')[:3]
+    
+    def filter_events(self, request):
+        events = self.all_events
+        
+        years = query_param_to_list(request.GET.get("year"))
+        event_types = query_param_to_list(request.GET.get("event_type"))
+        archive = request.GET.get("archive")
+        
+        is_archived = False
+        # events in the past
+        if archive == "True":
+            is_archived = True
+        
+        filters = models.Q()
+        
+        filters &= models.Q(is_archived=is_archived)
+        
+        if years:
+            filters &= models.Q(date_from__year__in=years)
+        if event_types:
+            filters &= models.Q(event_type__in=event_types)
+        
+        return events.filter(filters)
+    
+    def filter_and_paginate_events(self, request):
+        page = request.GET.get('page')
+        
+        filtered_events = self.filter_events(request)
+        
+        paginated_events = paginate(filtered_events, page, self.events_per_page)
+        
+        return paginated_events
+    
+    @property
+    def all_events(self):
+        return EventPage.objects.live().filter(is_hidden=False).order_by('-date_from')
+    
+    def get_context(self, request, *args, **kwargs):
+        context = super(EventIndexPage, self).get_context(
+            request, *args, **kwargs)
+        
+        context['featured_events'] = self.get_featured_events()
+        
+        context['events'] = self.filter_and_paginate_events(request)
+        
+        return context
+
+
+class EventPage(MetadataPageMixin, Page):
+    IMAGE_PLACEMENT_CHOICES = (
+        ('side', "Side by Side with Text"),
+        ('top', "At the top before text"),
+    )
+    
+    MEETING_PLATFORM_CHOICES = (
+        ('zoom', 'Zoom'),
+        ('google_meet', 'Google Meet'),
+    )
+
+    ATTENDANCE_MODE_CHOICES = (
+        ('in_person', _('In person')),
+        ('online', _('Online')),
+        ('hybrid', _('Hybrid')),
+    )
+    
+    template = 'event_page.html'
+    parent_page_types = ['events.EventIndexPage', ]
+    subpage_types = ['events.EventRegistrationPage']
+    
+    event_type = models.ForeignKey(EventType, on_delete=models.PROTECT, verbose_name=_("Event Type"))
+    category = ParentalManyToManyField('base.ServiceCategory', verbose_name=_("Service Categories"))
+    projects = ParentalManyToManyField('projects.ProjectPage', blank=True, verbose_name=_("Relevant Projects"))
+    date_from = models.DateTimeField(verbose_name=_("Event begin date"),
+                                     help_text=_("Day of the event. If multi-day, then this should be the first day"))
+    date_to = models.DateTimeField(blank=True, null=True,
+                                   verbose_name=_("End date - Note: Not Required if this is a one day Event"),
+                                   help_text=_("Not required if this is a one day event"))
+    timezone = TimeZoneField(default='Africa/Nairobi',
+                             help_text=_("Timezone"),
+                             choices_display="WITH_GMT_OFFSET",
+                             use_pytz=True,
+                             verbose_name=_("Timezone"))
+    
+    location = models.CharField(max_length=100, help_text=_("Where will the event take place ?"),
+                                verbose_name=_("Location"))
+    cost = models.CharField(max_length=100, blank=True, null=True,
+                            help_text=_("What is the cost for participating in this event ? Leave blank if free"),
+                            verbose_name=_("Cost"))
+    description = RichTextField(help_text="A description of the event ", features=SUMMARY_RICHTEXT_FEATURES,
+                                verbose_name=_("Description"))
+    agenda_document = models.ForeignKey(
+        'base.CustomDocumentModel',
+        verbose_name=_("Downloadable agenda document"),
+        help_text=_("Agenda document, if available, preferably in PDF format"),
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+'
+    )
+    image = models.ForeignKey(
+        'wagtailimages.Image',
+        verbose_name=_("Event Image"),
+        help_text=_("An image for this event, can be a poster or any relevant image"),
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+    )
+    image_placement = models.CharField(max_length=50, choices=IMAGE_PLACEMENT_CHOICES, default='top',
+                                       verbose_name=_("Image Placement"))
+    form_template = models.ForeignKey('events.EventRegistrationFormTemplate', on_delete=models.SET_NULL, blank=True,
+                                      null=True, verbose_name=_("Form template"))
+    
+    featured = models.BooleanField(
+        default=False,
+        help_text=_("Show this event in the events landing page as featured ?"), verbose_name=_("Featured"))
+    
+    is_hidden = models.BooleanField(
+        default=False,
+        help_text=_("Make this event hidden in events page or elsewhere"), verbose_name=_("Is hidden"))
+    
+    is_visible_on_homepage = models.BooleanField(
+        default=False,
+        help_text=_("Show this event on the homepage ?"), verbose_name=_("Is visible on homepage"))
+
+    is_el_nino_related = models.BooleanField(
+        default=False,
+        help_text=_("Show this event in the ENSO related activities section."),
+        verbose_name=_("ENSO related activity"),
+    )
+    
+    panelists = StreamField([
+        ('panelist', PanelistBlock()),
+    ], null=True, blank=True, use_json_field=True, verbose_name=_("Panelists"))
+    
+    sessions = StreamField([
+        ('session', SessionBlock()),
+    ], null=True, blank=True, use_json_field=True, verbose_name=_("Sessions"))
+    
+    additional_materials = StreamField([
+        ('additional_material', blocks.AdditionalMaterialBlock()),
+    ], null=True, blank=True, use_json_field=True, verbose_name=_("Additional Materials"))
+    sponsors = StreamField([
+        ('sponsor', EventSponsorBlock()),
+    ], null=True, blank=True, verbose_name=_("Acknowledgement/sponsors"), use_json_field=True)
+    
+    is_archived = models.BooleanField(default=False, verbose_name=_("Is archived"))
+    registration_open = models.BooleanField(default=True, verbose_name=_("Registration open"))
+    attendance_mode = models.CharField(
+        max_length=20,
+        choices=ATTENDANCE_MODE_CHOICES,
+        default="in_person",
+        verbose_name=_("Attendance mode"),
+    )
+    youtube_video_id = models.CharField(max_length=100, blank=True,
+                                        help_text=_("Youtube Video ID if the event is being livestreamed"))
+    meeting_platform = models.CharField(verbose_name=_("Meeting Registration Integration Platform"),
+                                        max_length=100,
+                                        blank=True, choices=MEETING_PLATFORM_CHOICES,
+                                        help_text=_("Platform for Event"), default="zoom")
+    
+    enable_zoom_integration = models.BooleanField(default=False,
+                                                  verbose_name=_("Enable Zoom Integration in registration form"))
+    enable_mailchimp_integration = models.BooleanField(default=False, verbose_name=_(
+        "Enable Mailchimp Integration in registration form"))
+    
+    content_panels = Page.content_panels + [
+        FieldPanel('event_type'),
+        FieldPanel('category', widget=CheckboxSelectMultiple),
+        FieldPanel('projects', widget=CheckboxSelectMultiple),
+        FieldPanel('date_from'),
+        FieldPanel('date_to'),
+        FieldPanel('timezone'),
+        FieldPanel('image'),
+        FieldPanel('description'),
+        FieldPanel('attendance_mode'),
+        FieldPanel('location'),
+        FieldPanel('agenda_document'),
+        FieldPanel('cost'),
+        # FieldPanel('meeting_platform'), Hide this too for now since we dont use other integration platform but zoom
+        FieldPanel('panelists'),
+        FieldPanel('sessions'),
+        FieldPanel('additional_materials'),
+        
+        FieldPanel('featured'),
+        FieldPanel('is_hidden'),
+        FieldPanel('is_visible_on_homepage'),
+        FieldPanel('is_el_nino_related'),
+        FieldPanel('sponsors'),
+        # FieldPanel('youtube_video_id'),
+    ]
+    
+    settings_panels = [
+        FieldPanel('registration_open'),
+        FieldPanel('form_template'),
+        FieldPanel('meeting_platform'),
+        FieldPanel('enable_zoom_integration'),
+        FieldPanel('enable_mailchimp_integration'),
+    ]
+    
+    # This is where all the tabs are created
+    edit_handler = TabbedInterface(
+        [
+            ObjectList(content_panels, heading=_('Content')),
+            ObjectList(Page.promote_panels, heading=_('SEO'), classname="seo"),
+            ObjectList(settings_panels, heading=_('Registration and Integrations'), classname="settings"),
+        ]
+    )
+    
+    class Meta:
+        ordering = ['-date_from', ]
+        verbose_name = _("Event Page")
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.attendance_mode in {"online", "hybrid"}:
+            if not self.date_to:
+                errors["date_to"] = _(
+                    "An end date and time is required for online and hybrid events."
+                )
+            elif self.date_from and self.date_to <= self.date_from:
+                errors["date_to"] = _("The end date and time must be after the start.")
+            if not self.meeting_platform:
+                errors["meeting_platform"] = _(
+                    "Choose an online meeting platform for this event."
+                )
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def uses_google_meet(self):
+        return (
+            self.attendance_mode in {"online", "hybrid"}
+            and self.meeting_platform == "google_meet"
+        )
+    
+    @property
+    def listing_summary(self):
+        p = get_first_non_empty_p_string(self.description)
+        
+        if p:
+            return truncatechars(p, 160)
+        
+        return None
+    
+    def get_meta_image(self):
+        meta_image = super().get_meta_image()
+        
+        # get the poster image
+        if not meta_image:
+            meta_image = self.image
+        
+        # try getting the parent image
+        if not meta_image:
+            meta_image = self.get_parent().specific.get_meta_image()
+        
+        return meta_image
+    
+    def get_meta_description(self):
+        meta_description = super().get_meta_description()
+        
+        # get the first paragraph of the description
+        if not meta_description:
+            meta_description = self.listing_summary
+        
+        # try getting the parent description
+        if not meta_description:
+            meta_description = self.get_parent().specific.get_meta_description()
+        
+        return meta_description
+    
+    @property
+    def count_down(self):
+        if self.date_to:
+            days = (self.date_from - timezone.now()).days
+            
+            if days > 0:
+                return days
+        
+        return None
+    
+    @cached_property
+    def card_props(self):
+        
+        card_text = self.search_description or self.description
+        
+        return {
+            "card_image": self.image,
+            "card_title": self.title,
+            "card_text": card_text,
+            "card_meta": date(self.date_from, 'd M Y'),
+            "card_more_link": self.url,
+            "card_tag": self.event_type,
+            "card_tags": ""
+        }
+    
+    @cached_property
+    def registration_page(self):
+        # .specific, not the base Page get_first_child() returns - templates
+        # read EventRegistrationPage-only attributes off this (e.g. is_closed),
+        # which silently resolve to falsy/empty on a bare Page instance instead
+        # of raising, so the closed-registration checks would look "off" forever.
+        child = self.get_first_child()
+        return child.specific if child else None
+    
+    @cached_property
+    def sessions_data(self):
+        sessions_list = list(self.sessions)
+        sessions_list.sort(key=lambda s: s.value.get("start_time"))
+        
+        sessions_by_date = {}
+        
+        for session in sessions_list:
+            start_time = session.value.get("start_time")
+            st = start_time.strftime('%I:%M %p')
+            ct = f"{st}"
+            session_date = start_time.date()
+            
+            if sessions_by_date.get(session_date) is None:
+                sessions_by_date[session_date] = {}
+                sessions_by_date[session_date][ct] = [session]
+            else:
+                if sessions_by_date[session_date].get(ct) is None:
+                    sessions_by_date[session_date][ct] = [session]
+                else:
+                    sessions_by_date[session_date][ct].append(session)
+        
+        return sessions_by_date
+    
+    @cached_property
+    def event_title(self):
+        return self.title
+    
+    @cached_property
+    def is_ended(self):
+        end_date = self.date_to
+        if not end_date:
+            end_date = self.date_from
+        return timezone.now() > end_date
+    
+    @cached_property
+    def in_progress(self):
+        start_date = self.date_from
+        end_date = self.date_to
+        
+        if start_date and end_date:
+            return start_date < timezone.now() < end_date
+        
+        return None
+    
+    @cached_property
+    def tz_gmt_offset(self):
+        return get_pytz_gmt_offset_str(self.timezone)
+
+
+class EventMeeting(models.Model):
+    """Operational Google Calendar/Meet state, kept outside page revisions."""
+
+    class SyncStatus(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        SYNCING = "syncing", _("Syncing")
+        READY = "ready", _("Ready")
+        FAILED = "failed", _("Failed")
+
+    event = models.OneToOneField(
+        EventPage,
+        on_delete=models.CASCADE,
+        related_name="google_meeting",
+    )
+    calendar_event_id = models.CharField(max_length=255, unique=True)
+    conference_request_id = models.UUIDField(default=uuid.uuid4, editable=False)
+    meet_url = models.URLField(blank=True)
+    payload_hash = models.CharField(max_length=64, blank=True)
+    sync_status = models.CharField(
+        max_length=20,
+        choices=SyncStatus.choices,
+        default=SyncStatus.PENDING,
+    )
+    last_error = models.TextField(blank=True)
+    last_synced_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Google Meet for {self.event.title}"
+
+
+# Custom page form to enable using a template to pre-populate  form fields
+class EventPageCustomForm(WagtailAdminFormPageForm):
+    # Override the __init__ function to update 'initial' form values
+    def __init__(self, data=None, files=None, parent_page=None, *args, **kwargs):
+        # update the kwargs BEFORE the init of the super form class
+        instance = kwargs.get('instance')
+        
+        # only update the initial value when creating a new page
+        if not instance.id:
+            # get parent title
+            event_title = parent_page.title
+            new_title = gettext("Register for %(event_title)s") % {'event_title': event_title}
+            slug = slugify(new_title)
+            instance.title = new_title
+            instance.slug = slug
+            
+            # check if we have parent page and parent page has form template selected
+            if parent_page and parent_page.form_template:
+                
+                form_template = parent_page.form_template
+                
+                template_form_fields = form_template.form_fields.all()
+                
+                registration_form_fields = []
+                
+                for template_form_field in template_form_fields:
+                    template_field_obj = template_form_field.to_dict()
+                    
+                    reg_field = EventRegistrationFormField(**template_field_obj)
+                    registration_form_fields.append(reg_field)
+                
+                instance.registration_form_fields = registration_form_fields
+                instance.validation_field = form_template.validation_field
+        
+        # Ensure you call the super class __init__
+        super(EventPageCustomForm, self).__init__(data, files, *args, **kwargs)
+        self.parent_page = parent_page
+        
+        latest_parent_revision = parent_page.get_latest_revision_as_object()
+        zoom_integration_enabled = (
+            latest_parent_revision.meeting_platform == "zoom"
+            and latest_parent_revision.enable_zoom_integration
+        )
+        mailchimp_integration_enabled = latest_parent_revision.enable_mailchimp_integration
+        
+        if not zoom_integration_enabled:
+            self.fields.pop('zoom_event', None)
+        
+        if not mailchimp_integration_enabled:
+            self.fields.pop('audience_list_id', None)
+
+
+class EventRegistrationPage(MetadataPageMixin, FormCleanNameFallbackMixin, FormPageClosingDateMixin, FormPageReviewSettingsMixin,
+                            WagtailCaptchaEmailForm, AbstractMailchimpIntegrationForm, AbstractZoomIntegrationForm):
+    base_form_class = EventPageCustomForm
+    form_builder = CustomWagtailCaptchaFormBuilder
+    submissions_list_view_class = CustomSubmissionsListView
+
+    template = 'event_registration_page.html'
+    landing_page_template = 'form_thank_you_landing.html'
+    parent_page_types = ['events.EventPage']
+    subpage_types = []
+    max_count_per_parent = 1
+    
+    # don't cache this page because it has a form
+    cache_control = 'no-cache'
+    
+    additional_information = models.TextField(blank=True, null=True,
+                                              help_text=_("Optional Additional information/details"),
+                                              verbose_name=_("Additional Information - (Optional)"))
+    registration_limit = models.PositiveIntegerField(blank=True, null=True,
+                                                     help_text=_("Number of available registrations"),
+                                                     verbose_name=_("Registration Limit - "
+                                                                    "(Leave blank if no limit)"))
+    
+    thank_you_text = models.TextField(blank=True, null=True,
+                                      help_text=_("Text to display after successful submission"),
+                                      verbose_name=_("Thank you text"))
+    validation_field = models.CharField(max_length=100, blank=True, verbose_name=_("Validation Field"),
+                                        help_text=_("A field on the form to check if is already submitted so as to "
+                                                    "prevent multiple submissions by one person. This is usually the "
+                                                    "email address field in snake casing format"),
+                                        default="email")
+    
+    send_confirmation_email = models.BooleanField(default=False,
+                                                  help_text=_("Should we send a confirmation/follow up email ?"),
+                                                  verbose_name=_("Send confirmation Email"))
+    email_field = models.CharField(max_length=100, blank=True,
+                                   help_text=_("The field in the form that corresponds to the email to use. "
+                                               "Should be snake_cased"), verbose_name=_("Email Field"), default="email_address")
+    email_confirmation_message = RichTextField(features=SUMMARY_RICHTEXT_FEATURES, blank=True,
+                                               verbose_name=_("Email Confirmation message"),
+                                               help_text=_("Message to send to the user. For example zoom links"))
+    batch_zoom_reg_enabled = models.BooleanField(default=False,
+                                                 verbose_name=_("Batch Zoom Registration Enabled - "
+                                                                "Leave unchecked for direct zoom registrations"),
+                                                 help_text=_(
+                                                     "Enable batch option for adding registrants to zoom later"))
+    
+    content_panels = AbstractEmailForm.content_panels + [
+        FieldPanel('additional_information'),
+        # FieldPanel('registration_limit'),
+        InlinePanel('registration_form_fields', label="Form fields"),
+        FieldPanel('validation_field'),
+        
+        MultiFieldPanel([
+            FieldPanel('to_address', heading="Email addresses"),
+            FieldPanel('subject'),
+        ], "Staff Email Notification Settings - When someone registers"),
+        
+        FieldPanel('thank_you_text', heading="Message to show on website after successful submission"),
+        FieldPanel('send_confirmation_email'),
+        FieldPanel('email_field'),
+        FieldPanel('email_confirmation_message'),
+    ] + FormPageReviewSettingsMixin.submission_review_settings_panels + FormPageClosingDateMixin.closing_date_panels
+    
+    class Meta:
+        verbose_name = _("Event Registration Page")
+    
+    def get_meta_image(self):
+        meta_image = super().get_meta_image()
+        
+        # try getting the parent image
+        if not meta_image:
+            meta_image = self.get_parent().specific.get_meta_image()
+        
+        return meta_image
+    
+    def get_meta_description(self):
+        meta_description = super().get_meta_description()
+        
+        # try getting the parent description
+        if not meta_description:
+            meta_description = self.get_parent().specific.get_meta_description()
+        
+        return meta_description
+    
+    @cached_property
+    def event(self):
+        return self.get_parent().specific
+    
+    def serve(self, request, *args, **kwargs):
+        # Set self.request so wagtailzoom and other mixins can access it
+        self.request = request
+        if self.is_closed:
+            form = None
+            if request.method == "POST":
+                messages.add_message(
+                    request, messages.ERROR,
+                    "Registration for this event has closed."
+                )
+        elif request.method == "POST":
+            form = self.get_form(
+                request.POST, request.FILES, page=self, user=request.user
+            )
+            if form.is_valid():
+                # check for email duplication
+                if self.should_process_form(request, form_data=form.data):
+                    form_submission = self.process_form_submission(form)
+                    # Google Meet delivery includes the registration confirmation
+                    # and join link, and is sent reliably by a Celery task. Other
+                    # providers keep the existing synchronous confirmation flow.
+                    if not self.event.uses_google_meet:
+                        try:
+                            self.send_confirmation_email_to_submitter(form.cleaned_data)
+                        except Exception as e:
+                            logger.error(f"[EVENT_REGISTRATION_PAGE] Error sending confirmation email: {e}")
+                    return self.render_landing_page(request, form_submission, *args, **kwargs)
+        else:
+            form = self.get_form(page=self, user=request.user)
+        
+        context = self.get_context(request)
+        context["form"] = form
+        response = TemplateResponse(request, self.get_template(request), context)
+        # This serve() override skips WagtailCacheMixin.serve(), so the
+        # cache_control opt-out above is never applied unless set here too -
+        # otherwise wagtail-cache stores this page (CSRF token baked into the
+        # HTML) and serves it to later visitors, whose cookie won't match it.
+        response['Cache-Control'] = self.cache_control
+        return response
+
+    def send_confirmation_email_to_submitter(self, cleaned_data):
+        """
+        Send a confirmation email to the submitter if enabled and email is present.
+        Sends as HTML if email_confirmation_message is RichText/HTML.
+        """
+        if not self.send_confirmation_email:
+            return
+
+        from django.core.mail import EmailMultiAlternatives
+        from django.conf import settings
+        from django.utils.html import strip_tags
+        from wagtail.rich_text import expand_db_html  # ← key import
+
+        email_field = self.email_field or 'email_address'
+        email = (
+            cleaned_data.get(email_field)
+            or cleaned_data.get('email')
+            or cleaned_data.get('email_address')
+        )
+        if not email:
+            return
+
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'no-reply@example.com'
+        subject = self.subject or "Registration Confirmation"
+        raw_message = self.email_confirmation_message or "Thank you for registering!"
+
+        html_message = None
+
+        # Case 1: Already a RichText wrapper object (has __html__)
+        if hasattr(raw_message, '__html__'):
+            html_message = expand_db_html(raw_message.source)
+
+        # Case 2: Raw DB string from a RichTextField (most common in page/snippet models)
+        elif isinstance(raw_message, str) and raw_message.strip().startswith('<'):
+            html_message = expand_db_html(raw_message)
+
+        # Case 3: Plain text fallback
+        if html_message:
+            text_message = strip_tags(html_message)
+        else:
+            text_message = str(raw_message)
+
+        msg = EmailMultiAlternatives(subject, text_message, from_email, [email])
+        if html_message:
+            msg.attach_alternative(html_message, "text/html")
+        msg.send(fail_silently=True)
+    
+    @cached_classmethod
+    def get_edit_handler(cls):
+        """
+        Override to "lazy load" the panels overriden by subclasses.
+        """
+        
+        panels = [
+            ObjectList(cls.content_panels, heading=_('Content')),
+            ObjectList(cls.promote_panels, heading=_('SEO'), classname="seo"),
+            ObjectList(cls.settings_panels, heading=_('Settings'), classname="settings"),
+            ObjectList(AbstractZoomIntegrationForm.integration_panels, heading=_('Zoom Events Settings')),
+            ObjectList(AbstractMailchimpIntegrationForm.integration_panels, heading=_('MailChimp Settings'))
+        ]
+        
+        return TabbedInterface(panels).bind_to_model(model=cls)
+    
+    def get_form_fields(self):
+        return self.registration_form_fields.all()
+    
+    def get_data_fields(self):
+        data_fields = super().get_data_fields()
+        meeting_platform = self.event.meeting_platform
+        
+        if meeting_platform == "zoom" and self.zoom_event:
+            data_fields.append(('added_to_zoom', _('Added to Zoom')), )
+        
+        return data_fields
+    
+    def get_form_class(self):
+        form_class = super(EventRegistrationPage, self).get_form_class()
+        form_class.required_css_class = 'required'
+        return form_class
+    
+    def should_perform_zoom_integration_operation(self, request, form):
+        return (
+            self.event.meeting_platform == "zoom"
+            and self.event.enable_zoom_integration
+        )
+    
+    def should_perform_mailchimp_integration_operation(self, request, form):
+        return self.event.enable_mailchimp_integration
+    
+    def show_page_listing_mailchimp_integration_button(self):
+        return self.event.enable_mailchimp_integration
+    
+    def show_page_listing_zoom_integration_button(self):
+        return (
+            self.event.meeting_platform == "zoom"
+            and self.event.enable_zoom_integration
+        )
+    
+    def should_process_form(self, request, form_data):
+        should_process = True
+        if self.validation_field:
+            validation_field = self.validation_field.replace('-', '_')
+            submission_class = self.get_submission_class()
+
+            # the configured field must actually be an email field - a field
+            # that was relabeled in the CMS (e.g. a Gender dropdown) keeps its
+            # original clean_name, so name alone isn't enough to trust it.
+            fields_by_name = {effective_clean_name(field): field.field_type for field in self.get_form_fields()}
+            form_validation_value = form_data.get(validation_field) if fields_by_name.get(validation_field) == 'email' else None
+
+            # try getting email using email or email_address
+            if not form_validation_value:
+                for fallback_field in ("email", "email_address"):
+                    if fields_by_name.get(fallback_field) == 'email':
+                        form_validation_value = form_data.get(fallback_field)
+                        if form_validation_value:
+                            # the duplicate-search query below keys off
+                            # validation_field, not the fallback name -
+                            # without this, a fallback match still searches
+                            # under the original (mismatched) validation_field
+                            # and never finds the existing submission.
+                            validation_field = fallback_field
+                            break
+
+            # last resort: validation_field is stale/misconfigured (e.g. it
+            # names a field that was later relabeled - clean_name only gets
+            # set once, at field creation, and editing the label afterwards
+            # doesn't regenerate it). Fall back to whichever field is
+            # actually typed as email so duplicate-prevention keeps working
+            # while the CMS setting gets fixed, instead of silently letting
+            # every submission through.
+            if not form_validation_value:
+                for field in self.get_form_fields():
+                    if field.field_type == 'email':
+                        candidate_name = effective_clean_name(field)
+                        candidate_value = form_data.get(candidate_name)
+                        if candidate_value:
+                            validation_field = candidate_name
+                            form_validation_value = candidate_value
+                            break
+
+            if form_validation_value:
+                queryset = submission_class.objects.filter(
+                    form_data__icontains=f'"{validation_field}": "{form_validation_value}"', page=self
+                )
+                if queryset.exists():
+                    # keep the field/value pairing out of the public message -
+                    # it's only safe to expose in the admin alert/logs below.
+                    messages.add_message(
+                        request, messages.ERROR,
+                        "The registration with this email address has already been submitted. "
+                        "This means you are already registered. "
+                        "Contact us if you think this is a mistake."
+                    )
+
+                    # We have a duplicate. Do not continue to process form
+                    should_process = False
+            else:
+                try:
+                    # send admins an email so that they check that a correct field is set
+                    mail_admins(subject="Incorrect form validation field found !",
+                                message="Incorrect validation field  - {} - set for the form page {}. Please "
+                                        "make sure the correct field is set to avoid duplicate submissions and "
+                                        "stop these messages from being sent".format(self.validation_field, self.title),
+                                fail_silently=True)
+                except Exception as e:
+                    logger.error("[EVENT_REGISTRATION_PAGE] Incorrect form validation field."
+                                 " Error sending email to admins: {}".format(e))
+                
+                # meanwhile, mark the form for saving
+                should_process = True
+        
+        return should_process
+
+    def process_form_submission(self, form):
+        cleaned_data = form.cleaned_data
+
+        for name, field in form.fields.items():
+            file_type = None
+            if isinstance(field, FormImageField):
+                file_type = 'image'
+            elif isinstance(field, FormDocumentField):
+                file_type = 'document'
+
+            if file_type:
+                file = cleaned_data.get(name)
+                if file:
+                    file.title = generate_title_from_filename(file.name)
+
+                    file_submission = FormFileSubmission.objects.create(
+                        file=file,
+                        file_type=file_type,
+                    )
+
+                    cleaned_data[name] = file_submission.pk
+                else:
+                    del cleaned_data[name]
+
+        submission = super(EventRegistrationPage, self).process_form_submission(form)
+
+        if self.event.uses_google_meet:
+            registration_page_id = self.pk
+            submission_id = submission.pk
+
+            def enqueue_google_meet_delivery():
+                from .tasks import deliver_google_meet_registration
+
+                try:
+                    deliver_google_meet_registration.delay(
+                        registration_page_id,
+                        submission_id,
+                    )
+                except Exception as exc:
+                    # The registration is already safely stored. Log broker
+                    # failures without turning a successful form POST into a 500.
+                    logger.error(
+                        "[GOOGLE_MEET] Could not enqueue registration delivery "
+                        f"for submission {submission_id}: {exc}"
+                    )
+
+            transaction.on_commit(enqueue_google_meet_delivery)
+
+        return submission
+
+    def save(self, *args, **kwargs):
+        parent = self.get_parent().specific
+        
+        # Get meta items from parent
+        if parent.search_description:
+            self.search_description = parent.search_description
+        if parent.search_image:
+            self.search_image = parent.search_image
+        
+        return super().save(*args, **kwargs)
+
+
+class EventRegistrationDelivery(models.Model):
+    """Tracks Google Meet email delivery for one saved form submission."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", _("Pending")
+        PROCESSING = "processing", _("Processing")
+        SENT = "sent", _("Sent")
+        FAILED = "failed", _("Failed")
+
+    registration_page = models.ForeignKey(
+        EventRegistrationPage,
+        on_delete=models.CASCADE,
+        related_name="google_meet_deliveries",
+    )
+    submission_id = models.PositiveBigIntegerField()
+    email = models.EmailField(blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    attempts = models.PositiveIntegerField(default=0)
+    last_error = models.TextField(blank=True)
+    sent_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("registration_page", "submission_id"),
+                name="unique_google_meet_registration_delivery",
+            )
+        ]
+
+    def __str__(self):
+        return f"Google Meet delivery for submission {self.submission_id}"
+
+
+class EventRegistrationFormField(FormFieldMaxLengthMixin, AbstractFormField):
+    FILE_SUBMISSION_FIELD_CHOICES = (
+        ("image", _("Upload Image")),
+        ("document", _("Upload PDF Document")),
+    )
+
+    field_type = models.CharField(
+        verbose_name=_("field type"), max_length=16, choices=FORM_FIELD_CHOICES + FILE_SUBMISSION_FIELD_CHOICES
+    )
+
+    page = ParentalKey(EventRegistrationPage,
+                       on_delete=models.CASCADE,
+                       related_name="registration_form_fields")
+
+
+@register_snippet
+class EventRegistrationFormTemplate(ClusterableModel):
+    template_name = models.CharField(max_length=200)
+    validation_field = models.CharField(max_length=200, default='email')
+    
+    panels = [
+        FieldPanel('template_name'),
+        InlinePanel('form_fields', label="Form fields"),
+        FieldPanel('validation_field'),
+    ]
+    
+    def __str__(self):
+        return self.template_name
+
+
+class EventRegistrationFormTemplateField(FormFieldMaxLengthMixin, AbstractFormField):
+    field_type = models.CharField(
+        verbose_name=_("field type"), max_length=16,
+        choices=FORM_FIELD_CHOICES + EventRegistrationFormField.FILE_SUBMISSION_FIELD_CHOICES
+    )
+
+    form_template = ParentalKey(EventRegistrationFormTemplate, on_delete=models.CASCADE, related_name="form_fields")
+
+    EXCLUDE = ['id', 'clean_name', 'form_template']
+    
+    def to_dict(self):
+        opts = self._meta
+        data = {}
+        for f in chain(opts.concrete_fields):
+            if f.name not in self.EXCLUDE:
+                data[f.name] = f.value_from_object(self)
+        return data
+
+
+def on_event_published(sender, **kwargs):
+    event_page = kwargs['instance']
+    
+    if event_page.zoom_events_id:
+        cache.delete(f'zoom-events-{event_page.zoom_events_id}')

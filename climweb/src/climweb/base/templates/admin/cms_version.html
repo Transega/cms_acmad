@@ -1,0 +1,251 @@
+{% extends "wagtailadmin/base.html" %}
+{% load i18n %}
+{% load l10n %}
+{% load wagtailadmin_tags wagtailimages_tags static nmhs_cms_tags markdownify %}
+{% block titletag %}
+    {% blocktranslate trimmed with title=page.get_admin_display_title %}
+        {{ title }}
+    {% endblocktranslate %}
+{% endblock %}
+
+{% block extra_css %}
+
+    <style>
+
+        .v-item {
+            padding-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .upgrade-section {
+            margin-top: 20px;
+        }
+
+        .upgrade-info {
+            font-weight: bold;
+        }
+
+        /* --- Live upgrade progress panel --- */
+        #upgrade-progress {
+            margin-top: 24px;
+            border: 1px solid var(--color-input-border);
+            border-radius: 4px;
+            background: var(--color-surface-menus);
+            padding: 20px 24px;
+        }
+
+        #upgrade-progress h3 {
+            margin: 0 0 12px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upgrade-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--color-input-border);
+            border-top-color: var(--color-interactive);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #upgrade-step {
+            font-size: 14px;
+            color: var(--color-text-meta);
+            margin-bottom: 6px;
+        }
+
+        #upgrade-meta {
+            font-size: 12px;
+            color: var(--color-text-meta);
+        }
+
+        .upgrade-status-success {
+            color: var(--color-positive);
+            font-weight: bold;
+        }
+
+        .upgrade-status-failed {
+            color: var(--color-critical);
+            font-weight: bold;
+        }
+
+        .upgrade-status-rolling_back {
+            color: var(--color-warning);
+            font-weight: bold;
+        }
+
+    </style>
+
+{% endblock %}
+
+{% block content %}
+
+    {% trans "ClimWeb Version Check" as header_str %}
+    {% include "wagtailadmin/shared/header.html" with title=header_str icon="cog" %}
+
+    <div class="nice-padding">
+        {% if error %}
+            <div class="help-block help-critical">
+                <svg class="icon icon-warning icon" aria-hidden="true">
+                    <use href="#icon-warning"></use>
+                </svg>
+                {{ error_message }}
+                {% if error_traceback %}
+                    <pre>{{ error_traceback }}</pre>
+                {% endif %}
+            </div>
+        {% else %}
+            {% if current_version %}
+                <div class="v-item">
+                    {% translate "Current installed version" %}: <strong>{% cms_version %}</strong>
+                </div>
+            {% endif %}
+
+            {% if latest_release and has_new_version %}
+                <div class="v-item">
+                    {% translate "Latest available version" %}:
+                    <strong>{{ latest_release.version }}</strong></div>
+            {% endif %}
+
+            {% if current_version and latest_release %}
+                <div class="upgrade-section">
+                    {% if not has_new_version %}
+                        <div>
+                            {% translate "Your ClimWeb version is up to date." %}
+                        </div>
+                    {% else %}
+                        {% if cms_upgrade_pending %}
+                            {# --- Live progress panel (shown while upgrade is running) --- #}
+                            <div id="upgrade-progress">
+                                <h3>
+                                    <span class="upgrade-spinner" id="upgrade-spinner"></span>
+                                    {% translate "Upgrade in progress…" %}
+                                </h3>
+                                <div id="upgrade-step">{% translate "Connecting to upgrade service…" %}</div>
+                                <div id="upgrade-meta"></div>
+                            </div>
+                        {% else %}
+                            <div class="upgrade-info">
+                                    <span style="margin-right: 4px">
+                                        {% translate "ClimWeb upgrade available" %}!
+                                    </span>
+
+                                {% if latest_release.body %}
+                                    <div style="margin: 20px 0">
+                                        {{ latest_release.body|markdownify }}
+                                    </div>
+                                {% endif %}
+
+                                <a href="{{ latest_release.html_url }}" target="_blank"
+                                   rel="noopener noreferrer" style="text-decoration: underline">
+                                    {% translate "Release notes" %}
+                                </a>
+                            </div>
+                            {% if cms_upgrade_hook_url %}
+                                <div style="margin-top: 20px">
+                                    <form method="POST"
+                                          enctype="multipart/form-data">
+                                        {% if form.non_field_errors %}
+                                            <div class="non-field_errors" style="margin-bottom: 20px">
+                                                {% include "wagtailadmin/shared/non_field_errors.html" with form=form %}
+                                            </div>
+                                        {% endif %}
+                                        <ul class="fields">
+                                            {% csrf_token %}
+                                            {% for field in form %}
+                                                {% if field.is_hidden %}
+                                                    {{ field }}
+                                                {% else %}
+                                                    {% include "wagtailadmin/shared/field.html" %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            <li>
+                                                <button class="button bicolor button--icon" type="submit">
+                                                    <span class="icon-wrapper">
+                                                        <svg class="icon icon-rotate icon" aria-hidden="true">
+                                                            <use href="#icon-rotate"></use>
+                                                        </svg>
+                                                    </span>
+                                                    {% translate "Upgrade now" %}
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    {% if cms_upgrade_pending %}
+    <script>
+    (function () {
+        const statusUrl = "{% url 'cms-upgrade-status' %}";
+        const stepEl    = document.getElementById('upgrade-step');
+        const metaEl    = document.getElementById('upgrade-meta');
+        const headingEl = document.querySelector('#upgrade-progress h3');
+        const spinnerEl = document.getElementById('upgrade-spinner');
+
+        let interval = setInterval(poll, 3000);
+
+        async function poll() {
+            try {
+                const resp = await fetch(statusUrl);
+                if (!resp.ok) return;
+                const data = await resp.json();
+
+                const status  = data.status  || 'in_progress';
+                const step    = data.step    || '';
+                const fromVer = data.from_version || '';
+                const toVer   = data.to_version   || '';
+                const updated = data.updated_at   || '';
+
+                stepEl.textContent = step;
+                if (fromVer && toVer) {
+                    metaEl.textContent = 'v' + fromVer + ' → v' + toVer +
+                        (updated ? '  ·  ' + new Date(updated).toLocaleTimeString() : '');
+                }
+
+                if (status === 'success') {
+                    clearInterval(interval);
+                    spinnerEl.style.display = 'none';
+                    headingEl.innerHTML = '<span class="upgrade-status-success">✓ {% translate "Upgrade complete" %}</span>';
+                    stepEl.textContent = step;
+                    setTimeout(() => location.reload(), 3000);
+                } else if (status === 'failed') {
+                    clearInterval(interval);
+                    spinnerEl.style.display = 'none';
+                    headingEl.innerHTML = '<span class="upgrade-status-failed">✗ {% translate "Upgrade failed" %}</span>';
+                    stepEl.style.color = 'var(--color-critical)';
+                    stepEl.style.fontWeight = 'bold';
+                } else if (status === 'rolling_back') {
+                    headingEl.querySelector('.upgrade-spinner') && (headingEl.querySelector('span:not(.upgrade-spinner)') || headingEl).innerHTML;
+                    const textNode = headingEl.lastChild;
+                    if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+                        textNode.textContent = ' {% translate "Rolling back…" %}';
+                    }
+                }
+            } catch (e) {
+                // network blip during restart is expected — keep polling
+            }
+        }
+
+        // First poll immediately so the user sees something right away
+        poll();
+    })();
+    </script>
+    {% endif %}
+
+{% endblock %}

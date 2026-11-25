@@ -1,0 +1,49 @@
+{% load wagtailcore_tags wagtailimages_tags lazyimages_tags wagtailiconchooser_tags %}
+
+<div class="ac-item {% if is_first %}ac-item--open{% endif %}">
+
+  <div class="ac-header">
+    <span class="ac-header-title">{{ value.heading }}</span>
+    <div class="ac-icon">
+      <svg class="ac-icon-plus" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      <svg class="ac-icon-minus" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5">
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="ac-body">
+    <div class="ac-body-inner">
+
+      {% if value.image %}
+        <div class="ac-body-img">
+          {% image value.image original as goal_img %}
+          <img class="progressive__img progressive--not-loaded"
+               data-progressive="{{ goal_img.url }}"
+               src="{% lazy_image_url goal_img %}"
+               alt="{{ value.heading }}" />
+        </div>
+      {% endif %}
+
+      <div class="ac-body-text">
+        <div class="format-text">{{ value.description|richtext }}</div>
+
+        {% if value.link_text and value.link_related_page %}
+          <a class="ac-link" href="{{ value.link_related_page.url }}">
+            {{ value.link_text }}
+            <span class="icon btn-icon">
+              {% svg_icon name="arrow-right-full" %}
+            </span>
+          </a>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+</div>

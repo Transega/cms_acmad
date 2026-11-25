@@ -1,0 +1,92 @@
+{% load wagtailcore_tags wagtailimages_tags wagtailembeds_tags lazyimages_tags nmhs_cms_tags wagtailiconchooser_tags i18n %}
+
+<div class="intro-section">
+  <div class="columns is-centered is-vcentered intro-section-wrapper">
+
+    <!-- LEFT: text -->
+    <div class="column is-5">
+      <div class="intro-accent"></div>
+
+      {% if page.introduction_title %}
+        <h2 class="intro-title">{{ page.introduction_title }}</h2>
+      {% endif %}
+
+      {% if page.introduction_text %}
+        <div class="intro-body format-text">
+          {{ page.introduction_text|richtext }}
+        </div>
+      {% endif %}
+
+      {% include "services/rationale_details.html" with page=page rationale_control=True %}
+
+      {% if show_subscribe_button %}
+        <div class="mb-5" style="margin-top: 1rem;">
+            <a class="button is-primary" href="{% url 'product_subscription' %}">
+                {% translate "Subscribe to product updates" %}
+            </a>
+        </div>
+      {% endif %}
+
+      {% block intro_extra %}{% endblock %}
+
+      {% if page.introduction_button_text %}
+        {% if page.introduction_button_link or page.introduction_button_link_external %}
+          <div class="intro-cta">
+            {% if page.introduction_button_link %}
+              <a href="{{ page.introduction_button_link.url }}"
+                 class="intro-btn button">
+                <span>{{ page.introduction_button_text }}</span>
+                <span class="icon btn-icon">
+                  {% svg_icon name="arrow-right-full" %}
+                </span>
+              </a>
+            {% else %}
+              <a href="{{ page.introduction_button_link_external }}"
+                 target="_blank"
+                 rel="noopener"
+                 class="intro-btn button">
+                <span>{{ page.introduction_button_text }}</span>
+                <span class="icon btn-icon">
+                  {% svg_icon name="arrow-right-full" %}
+                </span>
+              </a>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <!-- SPACER -->
+    <div class="column is-1 is-hidden-mobile"></div>
+
+    <!-- RIGHT: featured product or image -->
+    <div class="column is-6 intro-image-col">
+      {% if page.introduction_video_url %}
+        <div class="intro-video-embed">
+          {% embed page.introduction_video_url %}
+        </div>
+      {% elif page.gis_application %}
+        {% include "application_card.html" with application=page.gis_application intro=True %}
+      {% elif featured_product %}
+        {% include 'products/featured_product_card.html' with product=featured_product %}
+      {% else %}
+        <figure class="intro-figure">
+        {% if page.introduction_image %}
+          {% if page.introduction_image.url %}
+            {% svg page.introduction_image.file.name %}
+          {% else %}
+            {% image page.introduction_image original as intro_img %}
+            <img class="progressive__img progressive--not-loaded intro-img"
+                 data-progressive="{{ intro_img.url }}"
+                 src="{% lazy_image_url intro_img %}"
+                 alt="{{ page.introduction_title }}" />
+          {% endif %}
+        {% endif %}
+        </figure>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {% include "services/rationale_details.html" with page=page rationale_content=True %}
+</div>

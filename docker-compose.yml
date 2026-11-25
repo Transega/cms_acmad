@@ -1,97 +1,403 @@
-version: '3'
+x-climweb-variables: &climweb-variables
+  WAIT_TIMEOUT: 120
+  GUNICORN_NUM_OF_WORKERS: ${CMS_NUM_OF_WORKERS:-4}
+  GUNICORN_TIMEOUT: ${CMS_GUNICORN_TIMEOUT:-300}
+  DEBUG: ${CMS_DEBUG:-False}
+  WAGTAIL_SITE_NAME: ${CMS_SITE_NAME:-}
+  ADMIN_URL_PATH: ${CMS_ADMIN_URL_PATH:-}
+  TIME_ZONE: ${TIME_ZONE:-}
+  SECRET_KEY: ${SECRET_KEY:-}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+  DATABASE_URL: postgis://${CMS_DB_USER:-climweb}:${CMS_DB_PASSWORD}@climweb_db_dev:5432/${CMS_DB_NAME:-climweb}
+  REDIS_URL: redis://:${REDIS_PASSWORD}@climweb_redis_dev:6379/0
+  EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+  EMAIL_HOST: ${SMTP_EMAIL_HOST:-}
+  EMAIL_PORT: ${SMTP_EMAIL_PORT:-}
+  EMAIL_USE_TLS: ${SMTP_EMAIL_USE_TLS:-}
+  EMAIL_HOST_USER: ${SMTP_EMAIL_HOST_USER:-}
+  EMAIL_HOST_PASSWORD: ${SMTP_EMAIL_HOST_PASSWORD:-}
+  DJANGO_ADMINS: ${CMS_ADMINS:-}
+  DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-}
+  RECAPTCHA_PUBLIC_KEY: ${RECAPTCHA_PUBLIC_KEY:-}
+  RECAPTCHA_PRIVATE_KEY: ${RECAPTCHA_PRIVATE_KEY:-}
+  RECAPTCHA_DOMAIN: ${RECAPTCHA_DOMAIN:-www.google.com}
+  RECAPTCHA_VERIFY_REQUEST_TIMEOUT: ${RECAPTCHA_VERIFY_REQUEST_TIMEOUT:-60}
+  PRODUCT_SUBSCRIPTION_RATE_LIMIT_IP: ${PRODUCT_SUBSCRIPTION_RATE_LIMIT_IP:-10}
+  PRODUCT_SUBSCRIPTION_RATE_LIMIT_EMAIL: ${PRODUCT_SUBSCRIPTION_RATE_LIMIT_EMAIL:-3}
+  PRODUCT_SUBSCRIPTION_RATE_LIMIT_WINDOW: ${PRODUCT_SUBSCRIPTION_RATE_LIMIT_WINDOW:-3600}
+  GOOGLE_MEET_SERVICE_ACCOUNT_FILE: ${GOOGLE_MEET_SERVICE_ACCOUNT_FILE:-}
+  GOOGLE_DRIVE_ENABLED: ${GOOGLE_DRIVE_ENABLED:-False}
+  GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE: /run/secrets/acmad-drive-service-account.json
+  GOOGLE_DRIVE_SHARED_DRIVE_ID: ${GOOGLE_DRIVE_SHARED_DRIVE_ID:-}
+  GOOGLE_DRIVE_ROOT_FOLDER_ID: ${GOOGLE_DRIVE_ROOT_FOLDER_ID:-}
+  CMS_UPGRADE_HOOK_URL: ${CMS_UPGRADE_HOOK_URL:-}
+  WAGTAILADMIN_BASE_URL: ${CMS_BASE_URL:-}
+  LANGUAGE_CODE: ${CMS_DEFAULT_LANGUAGE_CODE:-en}
+  CAP_CERT_PATH: ${CAP_CERT_PATH:-}
+  CAP_PRIVATE_KEY_PATH: ${CAP_PRIVATE_KEY_PATH:-}
+  CAP_SIGNATURE_METHOD: ${CAP_SIGNATURE_METHOD:-ECDSA_SHA256}
+  CAP_MQTT_SECRET_KEY: ${CAP_MQTT_SECRET_KEY:-}
+  CLIMWEB_ADDITIONAL_APPS: ${CLIMWEB_ADDITIONAL_APPS:-}
+  CLIMWEB_PLUGIN_DIR: ${CLIMWEB_PLUGIN_DIR:-}
+  CLIMWEB_PLUGIN_GIT_REPOS: ${CLIMWEB_PLUGIN_GIT_REPOS:-}
+  CLIMWEB_PLUGIN_URLS: ${CLIMWEB_PLUGIN_URLS:-}
+  CLIMWEB_ENABLE_OTEL:
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  OTEL_RESOURCE_ATTRIBUTES:
+  OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-traceidratio}
+  OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.1}
+  OTEL_PER_MODULE_SAMPLER_OVERRIDES: ${OTEL_PER_MODULE_SAMPLER_OVERRIDES:-opentelemetry.instrumentation.django=always_on}
+  CLIMWEB_DEPLOYMENT_ENV: ${CLIMWEB_DEPLOYMENT_ENV:-dev}
+  WAGTAIL_NEWSLETTER_MAILCHIMP_API_KEY: ${WAGTAIL_NEWSLETTER_MAILCHIMP_API_KEY:-}
+  WAGTAIL_NEWSLETTER_FROM_NAME: ${WAGTAIL_NEWSLETTER_FROM_NAME:-}
+  WAGTAIL_NEWSLETTER_REPLY_TO: ${WAGTAIL_NEWSLETTER_REPLY_TO:-}
+  ACMAD_MULTIHAZARD_AUTO_IMPORT: ${ACMAD_MULTIHAZARD_AUTO_IMPORT:-False}
+  ACMAD_MULTIHAZARD_IMPORT_INTERVAL_HOURS: ${ACMAD_MULTIHAZARD_IMPORT_INTERVAL_HOURS:-6}
+  ACMAD_MULTIHAZARD_IMPORT_LIMIT: ${ACMAD_MULTIHAZARD_IMPORT_LIMIT:-10}
+  ACMAD_RAINFALL_AUTO_IMPORT: ${ACMAD_RAINFALL_AUTO_IMPORT:-False}
+  ACMAD_RAINFALL_IMPORT_INTERVAL_HOURS: ${ACMAD_RAINFALL_IMPORT_INTERVAL_HOURS:-6}
+  ACMAD_RAINFALL_IMPORT_LIMIT: ${ACMAD_RAINFALL_IMPORT_LIMIT:-7}
+  ACMAD_DEKADAL_AUTO_IMPORT: ${ACMAD_DEKADAL_AUTO_IMPORT:-False}
+  ACMAD_DEKADAL_IMPORT_INTERVAL_HOURS: ${ACMAD_DEKADAL_IMPORT_INTERVAL_HOURS:-24}
+  ACMAD_MONTHLY_CLIMATE_AUTO_IMPORT: ${ACMAD_MONTHLY_CLIMATE_AUTO_IMPORT:-False}
+  ACMAD_MONTHLY_CLIMATE_IMPORT_INTERVAL_HOURS: ${ACMAD_MONTHLY_CLIMATE_IMPORT_INTERVAL_HOURS:-24}
+  ACMAD_MONTHLY_CLIMATE_IMPORT_LIMIT: ${ACMAD_MONTHLY_CLIMATE_IMPORT_LIMIT:-2}
+  ACMAD_SEASON_ONSET_AUTO_IMPORT: ${ACMAD_SEASON_ONSET_AUTO_IMPORT:-False}
+  ACMAD_SEASON_ONSET_IMPORT_INTERVAL_HOURS: ${ACMAD_SEASON_ONSET_IMPORT_INTERVAL_HOURS:-24}
+  ACMAD_SEASON_ONSET_IMPORT_LIMIT: ${ACMAD_SEASON_ONSET_IMPORT_LIMIT:-3}
+  ACMAD_CLIMATE_CHANGE_AUTO_IMPORT: ${ACMAD_CLIMATE_CHANGE_AUTO_IMPORT:-False}
+  ACMAD_CLIMATE_CHANGE_IMPORT_INTERVAL_HOURS: ${ACMAD_CLIMATE_CHANGE_IMPORT_INTERVAL_HOURS:-168}
+  ACMAD_CLIMATE_CHANGE_IMPORT_LIMIT: ${ACMAD_CLIMATE_CHANGE_IMPORT_LIMIT:-5}
+  ACMAD_ANNUAL_CLIMATE_AUTO_IMPORT: ${ACMAD_ANNUAL_CLIMATE_AUTO_IMPORT:-False}
+  ACMAD_ANNUAL_CLIMATE_IMPORT_INTERVAL_HOURS: ${ACMAD_ANNUAL_CLIMATE_IMPORT_INTERVAL_HOURS:-168}
+  ACMAD_ANNUAL_CLIMATE_IMPORT_LIMIT: ${ACMAD_ANNUAL_CLIMATE_IMPORT_LIMIT:-5}
+  ACMAD_FIVE_DAY_RAINFALL_AUTO_IMPORT: ${ACMAD_FIVE_DAY_RAINFALL_AUTO_IMPORT:-False}
+  ACMAD_FIVE_DAY_RAINFALL_IMPORT_INTERVAL_HOURS: ${ACMAD_FIVE_DAY_RAINFALL_IMPORT_INTERVAL_HOURS:-24}
+  ACMAD_FIVE_DAY_RAINFALL_IMPORT_LIMIT: ${ACMAD_FIVE_DAY_RAINFALL_IMPORT_LIMIT:-3}
+  ACMAD_SEASONAL_VERIFICATION_AUTO_IMPORT: ${ACMAD_SEASONAL_VERIFICATION_AUTO_IMPORT:-False}
+  ACMAD_SEASONAL_VERIFICATION_IMPORT_INTERVAL_HOURS: ${ACMAD_SEASONAL_VERIFICATION_IMPORT_INTERVAL_HOURS:-168}
+  ACMAD_SEASONAL_VERIFICATION_IMPORT_LIMIT: ${ACMAD_SEASONAL_VERIFICATION_IMPORT_LIMIT:-3}
+  ACMAD_MODEL_PERFORMANCE_AUTO_IMPORT: ${ACMAD_MODEL_PERFORMANCE_AUTO_IMPORT:-False}
+  ACMAD_MODEL_PERFORMANCE_IMPORT_INTERVAL_HOURS: ${ACMAD_MODEL_PERFORMANCE_IMPORT_INTERVAL_HOURS:-168}
+  ACMAD_MODEL_PERFORMANCE_IMPORT_LIMIT: ${ACMAD_MODEL_PERFORMANCE_IMPORT_LIMIT:-3}
+  ACMAD_CLIMATE_WATCH_AUTO_IMPORT: ${ACMAD_CLIMATE_WATCH_AUTO_IMPORT:-False}
+  ACMAD_CLIMATE_WATCH_IMPORT_INTERVAL_HOURS: ${ACMAD_CLIMATE_WATCH_IMPORT_INTERVAL_HOURS:-168}
+  ACMAD_CLIMATE_WATCH_IMPORT_LIMIT: ${ACMAD_CLIMATE_WATCH_IMPORT_LIMIT:-5}
+  ACMAD_RAINFALL_EXCEEDANCE_AUTO_IMPORT: ${ACMAD_RAINFALL_EXCEEDANCE_AUTO_IMPORT:-False}
+  ACMAD_RAINFALL_EXCEEDANCE_IMPORT_INTERVAL_HOURS: ${ACMAD_RAINFALL_EXCEEDANCE_IMPORT_INTERVAL_HOURS:-168}
+  ACMAD_RAINFALL_EXCEEDANCE_IMPORT_LIMIT: ${ACMAD_RAINFALL_EXCEEDANCE_IMPORT_LIMIT:-3}
+  ACMAD_CRYOSPHERE_AUTO_IMPORT: ${ACMAD_CRYOSPHERE_AUTO_IMPORT:-False}
+  ACMAD_CRYOSPHERE_IMPORT_INTERVAL_HOURS: ${ACMAD_CRYOSPHERE_IMPORT_INTERVAL_HOURS:-720}
+  ACMAD_CRYOSPHERE_IMPORT_LIMIT: ${ACMAD_CRYOSPHERE_IMPORT_LIMIT:-5}
+  ACMAD_POLICY_BRIEFS_AUTO_IMPORT: ${ACMAD_POLICY_BRIEFS_AUTO_IMPORT:-False}
+  ACMAD_POLICY_BRIEFS_IMPORT_INTERVAL_HOURS: ${ACMAD_POLICY_BRIEFS_IMPORT_INTERVAL_HOURS:-24}
+  ACMAD_POLICY_BRIEFS_IMPORT_LIMIT: ${ACMAD_POLICY_BRIEFS_IMPORT_LIMIT:-5}
+  ACMAD_ATMOSPHERIC_ANALYSIS_AUTO_IMPORT: ${ACMAD_ATMOSPHERIC_ANALYSIS_AUTO_IMPORT:-False}
+  ACMAD_ATMOSPHERIC_ANALYSIS_IMPORT_INTERVAL_HOURS: ${ACMAD_ATMOSPHERIC_ANALYSIS_IMPORT_INTERVAL_HOURS:-6}
+  ACMAD_HEAT_STRESS_AUTO_IMPORT: ${ACMAD_HEAT_STRESS_AUTO_IMPORT:-False}
+  ACMAD_HEAT_STRESS_IMPORT_INTERVAL_HOURS: ${ACMAD_HEAT_STRESS_IMPORT_INTERVAL_HOURS:-6}
+  ACMAD_HEAT_STRESS_IMPORT_LIMIT: ${ACMAD_HEAT_STRESS_IMPORT_LIMIT:-3}
+  ACMAD_ITD_ITCZ_AUTO_IMPORT: ${ACMAD_ITD_ITCZ_AUTO_IMPORT:-False}
+  ACMAD_ITD_ITCZ_IMPORT_INTERVAL_HOURS: ${ACMAD_ITD_ITCZ_IMPORT_INTERVAL_HOURS:-6}
+  ACMAD_ITD_ITCZ_IMPORT_LIMIT: ${ACMAD_ITD_ITCZ_IMPORT_LIMIT:-3}
+  ACMAD_NOWCASTING_AUTO_IMPORT: ${ACMAD_NOWCASTING_AUTO_IMPORT:-False}
+  ACMAD_NOWCASTING_IMPORT_INTERVAL_HOURS: ${ACMAD_NOWCASTING_IMPORT_INTERVAL_HOURS:-1}
+  ACMAD_NOWCASTING_IMPORT_LIMIT: ${ACMAD_NOWCASTING_IMPORT_LIMIT:-3}
+  ACMAD_CLIMATE_HEALTH_AUTO_IMPORT: ${ACMAD_CLIMATE_HEALTH_AUTO_IMPORT:-False}
+  ACMAD_CLIMATE_HEALTH_IMPORT_INTERVAL_HOURS: ${ACMAD_CLIMATE_HEALTH_IMPORT_INTERVAL_HOURS:-24}
+  ACMAD_CLIMATE_HEALTH_IMPORT_LIMIT: ${ACMAD_CLIMATE_HEALTH_IMPORT_LIMIT:-5}
+  ACMAD_SEASONAL_FORECAST_AUTO_IMPORT: ${ACMAD_SEASONAL_FORECAST_AUTO_IMPORT:-False}
+  ACMAD_SEASONAL_FORECAST_IMPORT_INTERVAL_HOURS: ${ACMAD_SEASONAL_FORECAST_IMPORT_INTERVAL_HOURS:-24}
+  ACMAD_SEASONAL_FORECAST_IMPORT_LIMIT: ${ACMAD_SEASONAL_FORECAST_IMPORT_LIMIT:-5}
+  ACMAD_INITIAL_IMPORT_ON_STARTUP: ${ACMAD_INITIAL_IMPORT_ON_STARTUP:-False}
+  RCC_DATA_ROOT: /climweb/data/rcc
+
+# Same variables as above, but pointed at the prod-profile services (climweb_db_prod /
+# climweb_redis_prod) instead of the dev ones, and defaulting CLIMWEB_DEPLOYMENT_ENV to
+# "production". Everything else is identical, so this merges the dev anchor and only
+# overrides what actually differs.
+x-climweb-variables-prod: &climweb-variables-prod
+  <<: *climweb-variables
+  DATABASE_URL: postgis://${CMS_DB_USER:-climweb}:${CMS_DB_PASSWORD}@climweb_db_prod:5432/${CMS_DB_NAME:-climweb}
+  REDIS_URL: redis://:${REDIS_PASSWORD}@climweb_redis_prod:6379/0
+  CLIMWEB_DEPLOYMENT_ENV: ${CLIMWEB_DEPLOYMENT_ENV:-production}
 
 services:
-  cms_db:
-    container_name: cms_db
-    image: postgis/postgis:15-master
-    restart: always
+  # ── dev profile (`docker compose --profile dev ...`, i.e. `make up`/`./dev.sh`) ──
+  climweb_db_dev:
+    container_name: climweb_db_dev
+    image: postgis/postgis:${POSTGRES_VERSION:-15}-master
+    platform: linux/x86_64
+    restart: no
+    profiles: ["dev"]
     environment:
-      - POSTGRES_USER=${CMS_DB_USER}
-      - POSTGRES_DB=${CMS_DB_NAME}
-      - POSTGRES_PASSWORD=${CMS_DB_PASSWORD}
+      - POSTGRES_USER=${CMS_DB_USER:-climweb}
+      - POSTGRES_DB=${CMS_DB_NAME:-climweb}
+      - POSTGRES_PASSWORD=${CMS_DB_PASSWORD:-climweb}
     ports:
       - "5432"
     volumes:
-      - ${CMS_DB_VOLUME}:/var/lib/postgresql/data/
-  cms_memcached:
-    image: memcached:1.6.12-alpine
-    container_name: cms_memcached
-    restart: always
-    ports:
-      - "11211"
-    entrypoint:
-      - memcached
-      - -m 1024
-      - -I 10m
-  cms_web:
-    image: cms_web
-    container_name: cms_web
-    platform: linux/x86_64
+      - ${CMS_DB_VOLUME:-./cms/db-data}:/var/lib/postgresql/data/
+
+  climweb_redis_dev:
+    image: redis:alpine
+    container_name: climweb_redis_dev
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env}
+    restart: no
+    profiles: ["dev"]
+
+  climweb_dev:
+    image: climweb_dev
+    container_name: climweb_dev
+    restart: no
+    profiles: ["dev"]
     build:
       context: .
-      dockerfile: ./docker/cms/Dockerfile
-    restart: always
-    command: sh -c "/wait && ./entrypoint.sh && gunicorn nmhs_cms.wsgi:application --bind 0.0.0.0:8000 --timeout 120 --workers=${CMS_NUM_OF_WORKERS}"
+      dockerfile: Dockerfile
+      target: dev
+      args:
+        - UID=${UID}
+        - GID=${GID}
+    ports:
+      - :8000
+    environment:
+      <<: *climweb-variables
+      WAIT_HOSTS: climweb_db_dev:5432,climweb_redis_dev:6379
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; s = socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 8000)); s.close()",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+    volumes:
+      - ./climweb:/climweb/web
+      - ${GOOGLE_DRIVE_SERVICE_ACCOUNT_HOST_FILE:-./secrets/acmad-drive-service-account.json}:/run/secrets/acmad-drive-service-account.json:ro
+      - static:/climweb/web/src/climweb/static
+      - media:/climweb/web/src/climweb/media
+      - private_exports:/climweb/web/src/climweb/private_exports
+      - ${RCC_DATA_VOLUME:-./cms/rcc-data}:/climweb/data/rcc
+      - ${BACKUP_VOLUME:-./cms/backup}:/climweb/web/src/climweb/backup
+
+  climweb_celery_worker_dev:
+    image: climweb_dev
+    container_name: climweb_celery_worker_dev
+    pull_policy: never
+    command: celery-worker
+    restart: no
+    profiles: ["dev"]
+    environment:
+      <<: *climweb-variables
+      WAIT_HOSTS: climweb_db_dev:5432,climweb_redis_dev:6379,climweb_dev:8000
+    volumes:
+      - ./climweb:/climweb/web
+      - ${GOOGLE_DRIVE_SERVICE_ACCOUNT_HOST_FILE:-./secrets/acmad-drive-service-account.json}:/run/secrets/acmad-drive-service-account.json:ro
+      - static:/climweb/web/src/climweb/static
+      - media:/climweb/web/src/climweb/media
+      - private_exports:/climweb/web/src/climweb/private_exports
+      - ${RCC_DATA_VOLUME:-./cms/rcc-data}:/climweb/data/rcc
+      - ${BACKUP_VOLUME:-./cms/backup}:/climweb/web/src/climweb/backup
+
+  climweb_celery_beat_dev:
+    image: climweb_dev
+    container_name: climweb_celery_beat_dev
+    pull_policy: never
+    restart: no
+    profiles: ["dev"]
+    command: celery-beat
+    environment:
+      <<: *climweb-variables
+      WAIT_HOSTS: climweb_db_dev:5432,climweb_redis_dev:6379,climweb_dev:8000
+    volumes:
+      - ./climweb:/climweb/web
+      - static:/climweb/web/src/climweb/static
+      - media:/climweb/web/src/climweb/media
+      - private_exports:/climweb/web/src/climweb/private_exports
+      - ${RCC_DATA_VOLUME:-./cms/rcc-data}:/climweb/data/rcc
+      - ${BACKUP_VOLUME:-./cms/backup}:/climweb/web/src/climweb/backup
+
+  climweb_nginx:
+    image: nginx:alpine
+    container_name: climweb_nginx
+    restart: no
+    profiles: ["dev"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/${NGINX_CONFIG:-nginx.conf}:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/ssl:/etc/nginx/ssl:ro
+      - ${LETSENCRYPT_DIR:-/etc/letsencrypt}:/etc/letsencrypt:ro
+      # Shared with certbot's webroot plugin for HTTP-01 renewal (nginx.conf serves this path at /.well-known/acme-challenge/ before the HTTPS redirect).
+      - ${CERTBOT_WEBROOT_DIR:-./deploy/certbot/www}:/var/www/certbot:ro
+      - static:/wagtail_static:ro
+      - media:/wagtail_media:ro
+    depends_on:
+      - climweb_dev
+
+  # ── prod profile (`docker compose --profile prod ...`) ──
+  # Builds the Dockerfile's `base` stage locally (gunicorn, production settings,
+  # no dev tooling) rather than pulling a published image. Kept in this same file
+  # rather than a separate compose file, per the existing single-compose-file setup.
+  climweb_db_prod:
+    container_name: climweb_db_prod
+    image: postgis/postgis:${POSTGRES_VERSION:-15}-master
+    restart: unless-stopped
+    profiles: ["prod"]
+    environment:
+      - POSTGRES_USER=${CMS_DB_USER:-climweb}
+      - POSTGRES_DB=${CMS_DB_NAME:-climweb}
+      - POSTGRES_PASSWORD=${CMS_DB_PASSWORD:-climweb}
+    volumes:
+      - ${CMS_DB_VOLUME_PROD:-./cms/db-data-prod}:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CMS_DB_USER:-climweb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  climweb_redis_prod:
+    image: redis:alpine
+    container_name: climweb_redis_prod
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env}
+    restart: unless-stopped
+    profiles: ["prod"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  climweb_prod:
+    image: climweb_prod
+    container_name: climweb_prod
+    restart: unless-stopped
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+      args:
+        - UID=${UID}
+        - GID=${GID}
     expose:
       - 8000
     environment:
-      - WAIT_HOSTS=cms_db:5432,cms_memcached:11211
-      - WAIT_TIMEOUT=120
-      - DEBUG=${CMS_DEBUG}
-      - CMS_VERSION=${CMS_VERSION}
-      - WAGTAIL_SITE_NAME=${CMS_SITE_NAME}
-      - ADMIN_URL_PATH=${CMS_ADMIN_URL_PATH}
-      - TIME_ZONE=${TIME_ZONE}
-      - SECRET_KEY=${SECRET_KEY}
-      - DATABASE_URL=postgis://${CMS_DB_USER}:${CMS_DB_PASSWORD}@cms_db:5432/${CMS_DB_NAME}
-      - MEMCACHED_URI=cms_memcached:11211
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - EMAIL_HOST=${SMTP_EMAIL_HOST}
-      - EMAIL_PORT=${SMTP_EMAIL_PORT}
-      - EMAIL_USE_TLS=${SMTP_EMAIL_USE_TLS}
-      - EMAIL_HOST_USER=${SMTP_EMAIL_HOST_USER}
-      - EMAIL_HOST_PASSWORD=${SMTP_EMAIL_HOST_PASSWORD}
-      - DJANGO_ADMINS=${CMS_ADMINS}
-      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
-      - RECAPTCHA_PUBLIC_KEY=${RECAPTCHA_PUBLIC_KEY}
-      - RECAPTCHA_PRIVATE_KEY=${RECAPTCHA_PRIVATE_KEY}
-      - NEXTJS_SERVER_URL=http://cms_mapviewer:3000
-      - CMS_UPGRADE_HOOK_URL=http://cms_webhook:9000/hooks/cms-upgrade
-    ports:
-      - "8000"
+      <<: *climweb-variables-prod
     volumes:
-      - ${CMS_STATIC_VOLUME}:/home/app/web/static
-      - ${CMS_MEDIA_VOLUME}:/home/app/web/media
-  cms_mapviewer:
-    image: cms_mapviewer
-    container_name: cms_mapviewer
-    restart: always
-    platform: linux/x86_64
-    build:
-      context: ./docker/mapviewer
-      args:
-        - CMS_API=${MAPVIEWER_CMS_API}
-        - BASE_PATH=${MAPVIEWER_BASE_PATH}
-        - ASSET_PREFIX=${MAPVIEWER_ASSET_PREFIX}
-        - ANALYTICS_PROPERTY_ID=${ANALYTICS_PROPERTY_ID}
-        - BITLY_TOKEN=${BITLY_TOKEN}
-        - GOOGLE_CUSTOM_SEARCH_CX=${GOOGLE_CUSTOM_SEARCH_CX}
-        - GOOGLE_SEARCH_API_KEY=${GOOGLE_SEARCH_API_KEY}
-        - NEXT_TELEMETRY_DISABLED=1
+      - static_prod:/climweb/web/src/climweb/static
+      - ${GOOGLE_DRIVE_SERVICE_ACCOUNT_HOST_FILE:-./secrets/acmad-drive-service-account.json}:/run/secrets/acmad-drive-service-account.json:ro
+      - media_prod:/climweb/web/src/climweb/media
+      - private_exports_prod:/climweb/web/src/climweb/private_exports
+      - private_staff_reports_prod:/climweb/web/src/climweb/private_staff_reports
+      - ${RCC_DATA_VOLUME_PROD:-./cms/rcc-data-prod}:/climweb/data/rcc
+      - ${BACKUP_VOLUME_PROD:-./cms/backup-prod}:/climweb/web/src/climweb/backup
+    depends_on:
+      climweb_db_prod:
+        condition: service_healthy
+      climweb_redis_prod:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  climweb_celery_worker_prod:
+    image: climweb_prod
+    container_name: climweb_celery_worker_prod
+    command: celery-worker
+    restart: unless-stopped
+    profiles: ["prod"]
+    environment:
+      <<: *climweb-variables-prod
     volumes:
-      - ${MAPVIEWER_NEXT_STATIC_VOLUME}:/app/nginx/.next/static
-    ports:
-      - "3000"
-  cms_nginx:
-    container_name: cms_nginx
-    image: nginx:1.20.2-alpine
-    restart: always
+      - ${GOOGLE_DRIVE_SERVICE_ACCOUNT_HOST_FILE:-./secrets/acmad-drive-service-account.json}:/run/secrets/acmad-drive-service-account.json:ro
+      - static_prod:/climweb/web/src/climweb/static
+      - media_prod:/climweb/web/src/climweb/media
+      - private_exports_prod:/climweb/web/src/climweb/private_exports
+      - private_staff_reports_prod:/climweb/web/src/climweb/private_staff_reports
+      - ${RCC_DATA_VOLUME_PROD:-./cms/rcc-data-prod}:/climweb/data/rcc
+      - ${BACKUP_VOLUME_PROD:-./cms/backup-prod}:/climweb/web/src/climweb/backup
+    depends_on:
+      climweb_prod:
+        condition: service_healthy
+
+  climweb_celery_beat_prod:
+    image: climweb_prod
+    container_name: climweb_celery_beat_prod
+    command: celery-beat
+    restart: unless-stopped
+    profiles: ["prod"]
+    environment:
+      <<: *climweb-variables-prod
     volumes:
-      - ${CMS_STATIC_VOLUME}:/wagtail_static
-      - ${CMS_MEDIA_VOLUME}:/wagtail_media
-      - ${MAPVIEWER_NEXT_STATIC_VOLUME}:/mapviewer/static
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - static_prod:/climweb/web/src/climweb/static
+      - media_prod:/climweb/web/src/climweb/media
+      - private_exports_prod:/climweb/web/src/climweb/private_exports
+      - ${RCC_DATA_VOLUME_PROD:-./cms/rcc-data-prod}:/climweb/data/rcc
+      - ${BACKUP_VOLUME_PROD:-./cms/backup-prod}:/climweb/web/src/climweb/backup
+    depends_on:
+      climweb_prod:
+        condition: service_healthy
+
+  climweb_acmad_seed_prod:
+    image: climweb_prod
+    container_name: climweb_acmad_seed_prod
+    command: manage bootstrap_acmad_products
+    restart: "no"
+    profiles: ["prod"]
+    environment:
+      <<: *climweb-variables-prod
+    volumes:
+      - static_prod:/climweb/web/src/climweb/static
+      - media_prod:/climweb/web/src/climweb/media
+      - ${BACKUP_VOLUME_PROD:-./cms/backup-prod}:/climweb/web/src/climweb/backup
+    depends_on:
+      climweb_prod:
+        condition: service_healthy
+
+  climweb_nginx_prod:
+    image: nginx:alpine
+    container_name: climweb_nginx_prod
+    restart: unless-stopped
+    profiles: ["prod"]
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      # Set NGINX_CONFIG_PROD=nginx.prod.ssl.conf in .env to serve over HTTPS
+      # (after copying deploy/nginx/ssl/ssl.conf.sample to ssl.conf and editing
+      # in your real domain/certificate paths).
+      - ./deploy/nginx/${NGINX_CONFIG_PROD:-nginx.prod.conf}:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/ssl:/etc/nginx/ssl:ro
+      - ${LETSENCRYPT_DIR:-/etc/letsencrypt}:/etc/letsencrypt:ro
+      # Shared with certbot's webroot plugin for HTTP-01 renewal (nginx.prod.ssl.conf
+      # serves this path at /.well-known/acme-challenge/ before the HTTPS redirect).
+      - ${CERTBOT_WEBROOT_DIR:-./deploy/certbot/www}:/var/www/certbot:ro
+      - static_prod:/wagtail_static:ro
+      - media_prod:/wagtail_media:ro
     depends_on:
-      - cms_web
+      climweb_prod:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  static:
+  media:
+  private_exports:
+  static_prod:
+  media_prod:
+  private_exports_prod:
+  private_staff_reports_prod:

@@ -1,0 +1,128 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: nmhs-cms\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-11 07:47+0300\n"
+"PO-Revision-Date: 2026-04-13 13:25\n"
+"Last-Translator: \n"
+"Language-Team: Amharic\n"
+"Language: am_ET\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Crowdin-File: /climweb/src/climweb/pages/services/locale/en/LC_MESSAGES/django.po\n"
+"X-Crowdin-File-ID: 1540\n"
+"X-Crowdin-Language: am\n"
+"X-Crowdin-Project: nmhs-cms\n"
+"X-Crowdin-Project-ID: 672958\n"
+
+#: climweb/src/climweb/pages/services/models.py:31
+msgid "Services listing Heading"
+msgstr "የአገልግሎቶች ዝርዝር ርዕስ"
+
+#: climweb/src/climweb/pages/services/models.py:40
+msgid "Service List Page"
+msgstr "የአገልግሎት ዝርዝር ገጽ"
+
+#: climweb/src/climweb/pages/services/models.py:41
+msgid "Service List Pages"
+msgstr "የአገልግሎት ዝርዝር ገጾች"
+
+#: climweb/src/climweb/pages/services/models.py:77
+msgid "Service"
+msgstr "አገልግሎት"
+
+#: climweb/src/climweb/pages/services/models.py:84
+msgid "What we do button text"
+msgstr "የምንሰራው የአዝራር ጽሑፍ"
+
+#: climweb/src/climweb/pages/services/models.py:91
+msgid "What we do button link"
+msgstr "የምንሰራው የአዝራር አገናኝ"
+
+#: climweb/src/climweb/pages/services/models.py:94
+msgid "Projects description text"
+msgstr "የፕሮጀክቶች መግለጫ ጽሑፍ"
+
+#: climweb/src/climweb/pages/services/models.py:95
+msgid "Project Description"
+msgstr "የፕሮጀክት መግለጫ"
+
+#: climweb/src/climweb/pages/services/models.py:99
+msgid "Feature block items"
+msgstr "የባህሪ እገዳ ንጥሎች"
+
+#: climweb/src/climweb/pages/services/models.py:118
+msgid "Youtube playlist"
+msgstr "የዩቲዩብ አጫዋች ዝርዝር"
+
+#: climweb/src/climweb/pages/services/models.py:129
+msgid "What we do in this Service section"
+msgstr "በዚህ የአገልግሎት ክፍል ውስጥ ምን እናደርጋለን"
+
+#: climweb/src/climweb/pages/services/models.py:136
+msgid "Projects Section"
+msgstr "የፕሮጀክቶች ክፍል"
+
+#: climweb/src/climweb/pages/services/models.py:139
+#: climweb/src/climweb/pages/services/templates/services/service_page.html:178
+msgid "Applications"
+msgstr "መተግበሪያዎች"
+
+#: climweb/src/climweb/pages/services/models.py:139
+msgid "Heading"
+msgstr "ርዕስ"
+
+#: climweb/src/climweb/pages/services/models.py:143
+msgid "Service Page"
+msgstr "የአገልግሎት ገጽ"
+
+#: climweb/src/climweb/pages/services/models.py:144
+msgid "Service Pages"
+msgstr "የአገልግሎት ገጾች"
+
+#: climweb/src/climweb/pages/services/models.py:253
+msgid "Application"
+msgstr "መተግበሪያ"
+
+#: climweb/src/climweb/pages/services/templates/services/service_page.html:44
+msgid "Our Products"
+msgstr "የእኛ ምርቶች"
+
+#: climweb/src/climweb/pages/services/templates/services/service_page.html:92
+#, fuzzy
+#| msgid "Service"
+msgid "Our Services"
+msgstr "የእኛ አገልግሎቶች"
+
+#: climweb/src/climweb/pages/services/templates/services/service_page.html:93
+#, fuzzy
+#| msgid "What we do"
+msgid "What We Do"
+msgstr "የምንሰራው"
+
+#: climweb/src/climweb/pages/services/templates/services/service_page.html:148
+msgid "Events"
+msgstr "ክስተቶች"
+
+#: climweb/src/climweb/pages/services/templates/services/service_page.html:164
+msgid "Latest Media"
+msgstr "የቅርብ ጊዜ ሚዲያ"
+
+#: climweb/src/climweb/pages/services/templates/services/service_page.html:166
+msgid "Highlights & Videos"
+msgstr "ዋና ዋና ዜናዎች እና ቪዲዮዎች"
+
+#~ msgid "Latest Updates"
+#~ msgstr "የቅርብ ጊዜ ዝመናዎች"
+
+#~ msgid "All News"
+#~ msgstr "ሁሉም ዜና"
+
+#~ msgid "All Publications"
+#~ msgstr "ሁሉም ህትመቶች"
+
+#~ msgid "Icon"
+#~ msgstr "አዶ"

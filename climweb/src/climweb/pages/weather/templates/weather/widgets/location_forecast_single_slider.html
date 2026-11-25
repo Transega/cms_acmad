@@ -1,0 +1,200 @@
+{% load static nmhs_cms_tags i18n wagtailiconchooser_tags %}
+{% if city_forecasts_by_date %}
+
+<div class="cf-card">
+
+  <!-- ── SHARED TOP BAR ── -->
+  <div class="cf-top-bar">
+    <div class="cf-top-left">
+      <span class="cf-location-icon">{% svg_icon "location" %}</span>
+      {% if city_detail_page_url %}
+        <a class="cf-city-name" href="{{ city_detail_page_url }}">{{ city.name }}</a>
+      {% else %}
+        <span class="cf-city-name">{{ city.name }}</span>
+      {% endif %}
+      {% if city_detail_page_url %}
+        <a class="cf-detail-btn" href="{{ city_detail_page_url }}">
+          <span class="is-hidden-mobile">{% translate "Detail" %}</span>
+          <span class="cf-detail-icon">{% svg_icon "info-circle" %}</span>
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="cf-search-wrap">
+      <div class="dropdown cf-search-wrap">
+        <div class="dropdown-trigger">
+          <div class="control has-icons-left cf-search-control">
+            <input id="city-search"
+                   class="input cf-search-input"
+                   type="text"
+                   placeholder="{% translate 'Search location' %}"
+                   aria-haspopup="true"
+                   aria-controls="city-search-menu"
+                   autocomplete="off">
+            <span class="icon is-small is-left cf-search-icon">
+              {% svg_icon "search" %}
+            </span>
+          </div>
+        </div>
+        <div class="dropdown-menu" id="city-search-menu" role="menu"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DAILY SLIDER ── -->
+  <div class="cf-panel">
+    <div class="glide cf-glide" id="single-forecast-slider">
+
+      <div class="glide__track" data-glide-el="track">
+        <div class="glide__slides">
+          {% for date, forecasts in city_forecasts_by_date.items %}
+            {% with forecasts.0 as forecast %}
+              <div class="glide__slide">
+                <div class="cf-slot-card {% if date|date_is_today %}cf-slot-card--today{% endif %}">
+
+                  <div class="cf-slot-hdr {% if not date|date_is_today %}cf-slot-hdr--muted{% endif %}">
+                    <div class="cf-slot-day">
+                      {% if date|date_is_today %}{% translate "TODAY" %}
+                      {% else %}{{ date|date:"D"|upper }}{% endif %}
+                    </div>
+                    <div class="cf-slot-date">{{ date|date:"d M" }}</div>
+                  </div>
+
+                  <div class="cf-slot-icon">
+                    <img src="{{ forecast.condition.icon_url }}"
+                         alt="{{ forecast.condition.label }}"
+                         title="{{ forecast.condition.label }}">
+                  </div>
+
+                  {% if show_condition_label %}
+                    <div class="cf-slot-condition">{{ forecast.condition.label }}</div>
+                  {% endif %}
+
+                  <div class="cf-slot-params">
+                    {% for param in weather_parameters %}
+                      <div class="cf-slot-param {% if param.parameter_info and param.parameter_info.icon %}cf-slot-param--icon{% endif %}">
+                        {% if param.parameter_info and param.parameter_info.icon %}
+                          <span class="cf-param-icon">{% svg_icon param.parameter_info.icon %}</span>
+                        {% else %}
+                          <span class="cf-param-name">{{ param.name }}:</span>
+                        {% endif %}
+                        {% if forecast.data_values_dict|get_dict_item:param.parameter %}
+                          {% with forecast.data_values_dict|get_dict_item:param.parameter as dv %}
+                            <span class="cf-param-val">
+                              {% if dv.value_with_units %}{{ dv.value_with_units }}{% else %}—{% endif %}
+                            </span>
+                          {% endwith %}
+                        {% else %}
+                          <span class="cf-param-val">—</span>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+
+                </div>
+              </div>
+            {% endwith %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="glide__arrows cf-arrows-wrap" data-glide-el="controls">
+        <button class="cf-arrow cf-arrow--left glide__arrow glide__arrow--left" data-glide-dir="<">
+          {% svg_icon "arrow-left" %}
+        </button>
+        <button class="cf-arrow cf-arrow--right glide__arrow glide__arrow--right" data-glide-dir=">">
+          {% svg_icon "arrow-right" %}
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  {% if external_source_attribution and external_source_url %}
+    <div class="cf-attribution">
+      <span class="cf-attr-icon">{% svg_icon "info-circle" %}</span>
+      <a href="{{ external_source_url }}" target="_blank" rel="noopener noreferrer">
+        {{ external_source_attribution }}
+      </a>
+    </div>
+  {% endif %}
+
+  <div class="loader-wrapper cf-loader-wrap">
+    <div class="loader is-loading cf-loader"></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+
+  function getPerView(width) {
+    if (width <= 320) return 1;
+    if (width <= 480) return 2;
+    if (width <= 640) return 3;
+    if (width <= 900) return 4;
+    return 5;
+  }
+
+  function initSlider() {
+    var el = document.getElementById('single-forecast-slider');
+    if (!el) return;
+    if (typeof Glide === 'undefined') { setTimeout(initSlider, 100); return; }
+
+    var panel          = el.parentElement;
+    var currentPerView = getPerView(panel ? panel.offsetWidth : window.innerWidth);
+
+    var glide = new Glide(el, {
+      type: 'slider', perView: currentPerView, gap: 8, bound: true, rewind: false, breakpoints: {},
+    }).mount();
+
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function (entries) {
+        var next = getPerView(entries[0].contentRect.width);
+        if (next !== currentPerView) { currentPerView = next; glide.update({ perView: next }); }
+      });
+      ro.observe(panel || el);
+    }
+  }
+
+  if (document.readyState === 'complete') { initSlider(); }
+  else { window.addEventListener('load', initSlider); }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var searchInput = document.getElementById('city-search');
+    var searchMenu  = document.getElementById('city-search-menu');
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', function () {
+      var q = this.value.trim();
+      if (!q) {
+        searchMenu.innerHTML = '';
+        searchMenu.closest('.dropdown').classList.remove('is-active');
+        return;
+      }
+      fetch('/city-forecast/search/?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data && data.length) {
+            searchMenu.innerHTML = '<div class="dropdown-content">' +
+              data.map(function (c) {
+                return '<a class="dropdown-item" href="?city=' + c.id + '">' + c.name + '</a>';
+              }).join('') + '</div>';
+            searchMenu.closest('.dropdown').classList.add('is-active');
+          } else {
+            searchMenu.innerHTML = '';
+            searchMenu.closest('.dropdown').classList.remove('is-active');
+          }
+        }).catch(function () {});
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!searchInput.contains(e.target))
+        searchMenu.closest('.dropdown').classList.remove('is-active');
+    });
+  });
+
+}());
+</script>
+
+{% endif %}

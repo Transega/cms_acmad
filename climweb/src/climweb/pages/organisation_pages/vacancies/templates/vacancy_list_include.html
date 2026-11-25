@@ -1,0 +1,73 @@
+{% load static wagtailcore_tags wagtailimages_tags lazyimages_tags nmhs_cms_tags i18n wagtailiconchooser_tags %}
+
+<div class="vl-results">
+  <div class="vl-list">
+
+    {% for vacancy in vacancies %}
+      <div class="vl-item {% if vacancy.is_closed %}vl-item--closed{% endif %}">
+
+        <!-- HEADER -->
+        <div class="vl-item-header">
+          <div class="vl-item-title-row">
+            {% if vacancy.is_new %}
+              <span class="vl-new-badge">{% translate "New" %}</span>
+            {% endif %}
+            {% if vacancy.is_closed %}
+              <span class="vl-closed-badge">{% translate "Closed" %}</span>
+            {% endif %}
+            <h3 class="vl-item-title">
+              <a href="{{ vacancy.url }}">{{ vacancy.position_title }}</a>
+            </h3>
+          </div>
+
+          <!-- META PILLS -->
+          <div class="vl-item-pills">
+
+            <span class="vl-pill">
+              <span class="icon">{% svg_icon name="calendar-alt" %}</span>
+              <span class="vl-pill-label">{% translate "Posted" %}:</span>
+              <span>{{ vacancy.posting_date|date:"d M Y" }}</span>
+            </span>
+
+            <span class="vl-pill {% if vacancy.is_closed %}vl-pill--closed{% endif %}">
+              <span class="icon">{% svg_icon name="hourglass-half" %}</span>
+              <span class="vl-pill-label">{% translate "Closes" %}:</span>
+              <span>{{ vacancy.deadline|date:"d M Y, H:i" }}</span>
+            </span>
+
+            {% if vacancy.duty_station %}
+              <span class="vl-pill">
+                <span class="icon">{% svg_icon name="location" %}</span>
+                <span>{{ vacancy.duty_station }}</span>
+              </span>
+            {% endif %}
+
+            {% if vacancy.duration %}
+              <span class="vl-pill">
+                <span class="icon">{% svg_icon name="time" %}</span>
+                <span>{{ vacancy.duration }}</span>
+              </span>
+            {% endif %}
+
+          </div>
+        </div>
+
+        <!-- BODY -->
+        <div class="vl-item-body">
+          <div class="vl-item-footer">
+            <a href="{{ vacancy.url }}" class="vl-view-btn">
+              {% translate "View details" %}
+              <span class="icon btn-icon">
+                {% svg_icon name="arrow-right-full" %}
+              </span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    {% endfor %}
+
+  </div>
+
+  {% include 'pagination_include.html' with items=vacancies %}
+</div>

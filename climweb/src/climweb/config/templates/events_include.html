@@ -1,0 +1,49 @@
+{% load wagtailcore_tags static wagtailimages_tags lazyimages_tags wagtailsettings_tags i18n wagtailiconchooser_tags %}
+{% get_settings use_default_site=True %}
+
+<div class="ev-section">
+
+  <div class="ev-header">
+    <div>
+      <p class="ev-eyebrow">{% translate "Upcoming" %}</p>
+      <h2 class="ev-title">{% translate "Events" %}</h2>
+    </div>
+    {% if settings.base.ImportantPages.all_events_page and not hide_more_link %}
+      <a href="{{ settings.base.ImportantPages.all_events_page.url }}" class="ev-more-link">
+        {% translate "All events" %}
+        <span class="icon btn-icon">{% svg_icon name="arrow-right-full" %}</span>
+      </a>
+    {% endif %}
+  </div>
+
+  <div class="ev-list">
+    {% for event in events.all|slice:":3" %}
+      <a href="{{ event.url }}" class="ev-item">
+
+        <!-- DATE BADGE -->
+        <div class="ev-date-box">
+          <span class="ev-day">{{ event.date_from|date:'d' }}</span>
+          <span class="ev-mon">{{ event.date_from|date:'M' }}</span>
+        </div>
+
+        <!-- DETAIL -->
+        <div class="ev-detail">
+          <span class="ev-type">{{ event.event_type }}</span>
+          <span class="ev-name">{{ event.event_title }}</span>
+          {% if event.date_to %}
+            <span class="ev-date-range">
+              {{ event.date_from|date:'d M Y' }} – {{ event.date_to|date:'d M Y' }}
+            </span>
+          {% endif %}
+        </div>
+
+        <!-- ARROW -->
+        <div class="ev-arrow">
+          {% svg_icon name="arrow-right-full" %}
+        </div>
+
+      </a>
+    {% endfor %}
+  </div>
+
+</div>

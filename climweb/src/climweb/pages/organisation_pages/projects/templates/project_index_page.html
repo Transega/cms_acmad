@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static i18n wagtailcore_tags %}
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/publication.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/projects.css' %}">
+{% endblock %}
+
+{% block body_class %}projects-page{% endblock %}
+
+{% block content %}
+    <main>
+        {% include 'hero.html' with page=page %}
+        {% if page.introduction_title or page.introduction_text or page.introduction_image %}
+          {% if page.introduction_image %}
+            <section class="nmhs-work " style="background-color:#f8f9fb">
+                <div class="work container">
+                    {% include 'service_introduction.html' with page=page %}
+                </div>
+            </section>
+        {% else %}
+            <section class="nmhs-work" style="background-color:#f8f9fb">
+                <div class="work container">
+                    <h2 class="title is-3">
+                        {{ page.introduction_title }}
+                    </h2>
+                    <div class="intro-description format-text">
+                        {{ page.introduction_text|richtext }}
+                    </div>
+                </div>
+            </section>
+          {% endif %}
+        {% endif %}
+
+        <section class="all-projects-section listing-section">
+            <div class="container">
+                <div class="projects-section-header">
+                    <p class="projects-eyebrow">{% translate "Portfolio" %}</p>
+                    <h2 id="results" class="projects-section-title">{% translate "All Projects" %}</h2>
+                </div>
+                <div class="columns">
+                    <div class="column is-3 is-full-mobile">
+                        {% include 'projects_filter_include.html' with filters=page.filters %}
+                    </div>
+                    <div class="column is-9 is-full-mobile">
+                        {% include 'projects_list_include.html' with projects=projects %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+{% endblock content %}
+
+{% block extra_js %}
+
+    <script>
+
+        $(document).ready(function () {
+
+            // If on smaller screens, collapse all filter items
+            const windowWidth = $(window).width();
+
+            if (windowWidth <= 768) {
+                //for  smaller devices
+                $('.js-accordion-item').removeClass('active');
+            }
+
+            const listButton = $("#list-view-button");
+            const gridButton = $("#grid-view-button");
+            const wrapper = $(".results-list");
+            const resultItem = $(".result-list-item");
+
+
+            const params = getParams(window.location.href);
+
+            // mark checkboxes from params url, on load
+            markCheckboxesFromUrlParams('project-filter', params, function (params) {
+                if (params && params.view) {
+                    if (params.view === 'grid') {
+                        listButton.removeClass("active");
+                        gridButton.addClass("active");
+                        wrapper.removeClass("list-view").addClass("grid-view columns is-mobile is-multiline");
+                        resultItem.addClass("column is-one-third-desktop is-full-mobile");
+                    } else {
+                        gridButton.removeClass("active");
+                        listButton.addClass("active");
+                        wrapper.removeClass("grid-view columns is-mobile is-multiline").addClass("list-view");
+                        resultItem.removeClass("column is-one-third-desktop is-full-mobile");
+                    }
+                }
+            });
+
+            const baseUrl = "{{ page.url }}";
+
+            filterChangeListener('project-filter', params, function (clickedEl, url_params) {
+                window.location.href = `${baseUrl}?${url_params}#results`;
+            });
+
+            listButton.on('click', function () {
+                gridButton.removeClass("active");
+                listButton.addClass("active");
+                wrapper.removeClass("grid-view columns is-mobile is-multiline").addClass("list-view");
+                resultItem.removeClass("column is-one-third-desktop is-full-mobile");
+            });
+
+            gridButton.on('click', function () {
+                listButton.removeClass("active");
+                gridButton.addClass("active");
+                wrapper.removeClass("list-view").addClass("grid-view columns is-mobile is-multiline");
+                resultItem.addClass("column is-one-third-desktop is-full-mobile");
+            });
+
+        });
+
+    </script>
+
+{% endblock %}
+

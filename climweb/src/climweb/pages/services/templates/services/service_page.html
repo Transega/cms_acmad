@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% load static wagtailsettings_tags i18n wagtailcore_tags wagtailimages_tags lazyimages_tags wagtailiconchooser_tags %}
+{% get_settings use_default_site=True %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/services_page.css' %}?v={% now 'U' %}">
+    {% if page.service_sectors %}
+        <link rel="stylesheet" type="text/css" href="{% static 'css/sector_service.css' %}">
+    {% endif %}
+    {% if page.youtube_playlist %}
+        <link rel="stylesheet" type="text/css" href="{% static 'css/jquery.skeleton.css' %}">
+        <link rel="stylesheet" type="text/css" href="{% static 'css/video_include.css' %}">
+        <link rel="stylesheet" type="text/css" href="{% static 'css/project_detail.css' %}">
+    {% endif %}
+{% endblock %}
+
+{% block body_class %}service_page{% endblock %}
+
+{% block content %}
+    <main class="is-index">
+        {% include 'hero.html' with page=page %}
+        {% if page.service_sectors %}
+            <section class="sector-service-nav" aria-label="{% translate 'Sector navigation' %}">
+                <div class="container">
+                    <nav class="sector-service__nav sector-service__nav--top">
+                        {% for block in page.service_sectors %}
+                            <a href="#{{ block.value.anchor }}">
+                                {% if block.value.icon %}<span class="sector-service__nav-icon">{% svg_icon name=block.value.icon %}</span>{% endif %}
+                                <span>{{ block.value.title }}</span>
+                            </a>
+                        {% endfor %}
+                    </nav>
+                </div>
+            </section>
+        {% endif %}
+        {% if page.introduction_image %}
+            <section class="service-introduction service-introduction--media nmhs-work is-desktop">
+                <div class="work container">
+                    {% include 'service_introduction.html' with page=page what_we_do=False %}
+                </div>
+            </section>
+        {% else %}
+            <section class="service-introduction service-introduction--text">
+                <div class="work container">
+                    {% if page.introduction_title %}
+                        <h2 class="title is-3">
+                            {{ page.introduction_title }}
+                        </h2>
+                    {% endif %}
+
+                    {% if page.introduction_text %}
+                        <div class="intro-description format-text">
+                            {{ page.introduction_text|richtext }}
+                        </div>
+                    {% endif %}
+                    {% include "services/rationale_details.html" with page=page %}
+                </div>
+            </section>
+        {% endif %}
+        {% if page.service_sectors %}
+            <section class="sector-service">
+                <div class="container">
+                    <div class="sector-service__sections">
+                        {% for block in page.service_sectors %}
+                            {% include_block block %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+        {% elif page.products %}
+            <section id="offers" class="offers"
+                     style="background-image: url('{% static 'img/bg_products.png' %}'); background-repeat:no-repeat; background-size:cover">
+                <div class="container">
+                    <h2 class="section-title has-text-centered">
+                        {% translate 'Our Products' %}
+                    </h2>
+                    <div class="columns is-multiline is-mobile is-centered">
+                        {% for product in page.products %}
+                            <div class="column is-one-quarter-desktop is-full-mobile">
+                                <a href="{{ product.url }}">
+                                    <div class="product-card">
+                                        {% if product.listing_image %}
+                                            {% image product.listing_image original as product_img %}
+                                            <div class="progressive__bg progressive--not-loaded product-image"
+                                                 data-progressive="{{ product_img.url }}"
+                                                 style="background-image: url({% lazy_image_url product_img %});">
+                                                <div class="p-6 product-content">
+                                                    <div class="product-title">
+                                                        {{ product.title|truncatechars:40 }}
+                                                    </div>
+                                                    <div>
+                                                        <span class="icon btn-icon">
+                                                            {% svg_icon name="arrow-right-full" %}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="p-6 product-content">
+                                                <div class="product-title">
+                                                    {{ product.title|truncatechars:40 }}
+                                                </div>
+                                                <div>
+                                                    <span class="icon btn-icon">
+                                                        {% svg_icon name="arrow-right-full" %}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+        {% endif %}
+
+        {% if page.what_we_do_items %}
+        <section class="wwd-section">
+        <div class="container">
+            <div class="wwd-header has-text-centered">
+            <p class="wwd-eyebrow">{% translate "Our Services" %}</p>
+            <h2 class="wwd-title-main">{% translate "What We Do" %}</h2>
+            </div>
+
+            <div class="intro-items-container">
+            {% with page.what_we_do_items|length|divisibleby:3 as is_by3 %}
+                <div class="columns is-multiline is-mobile is-centered">
+                {% for block in page.what_we_do_items %}
+                    {% include_block block with is_by3=is_by3 %}
+                {% endfor %}
+                </div>
+            {% endwith %}
+
+            {% if page.what_we_do_button_text and page.what_we_do_button_link %}
+                <div class="wwd-footer has-text-centered">
+                <a href="{{ page.what_we_do_button_link.url }}" class="wwd-btn">
+                    <span>{{ page.what_we_do_button_text }}</span>
+                    <span class="icon btn-icon">
+                    {% svg_icon name="arrow-right-full" %}
+                    </span>
+                </a>
+                </div>
+            {% endif %}
+            </div>
+        </div>
+        </section>
+        {% endif %}
+
+        {% if page.feature_block_items %}
+            <section class="climate-change-feature-blocks-section">
+                <div class="container">
+                {% include 'feature_block_section.html' with feature_blocks=page.feature_block_items %}
+
+                </div>            
+            </section>
+        {% endif %}
+        {% if page.extra_content %}
+            {% for block in page.extra_content %}
+                <section class="section {% if block.block_type == "accordion" %}ac-section{% endif %}">
+                    {% include_block block %}
+                </section>
+            {% endfor %}
+        {% endif %}
+
+        {% if page.show_projects_section and page.projects.all %}
+            <section class="projects-inline">
+                <div class="container">
+                    {% include 'projects_include.html' with page=page %}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if page.show_events_section and page.events.all %}
+            <section class="events-inline">
+                <div class="container">
+                    <h2 class="title is-3">
+                        {% translate "Events" %}
+                    </h2>
+                    {% include 'events_include.html' with events=page.events %}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if page.latest_updates %}
+            {% include 'home/section/updates_include.html' %}
+        {% endif %}
+
+        {% if page.youtube_playlist %}
+            <section class="section videos" id="videoSection">
+                <div class="container is-align-content-center">
+                    <div class="my-6">
+                        <p class="is-uppercase has-text-weight-bold is-size-8 mb-1" style="color:var(--primary-color); letter-spacing:0.08em;">
+                            {% translate "Latest Media" %}
+                        </p>
+                        <h2 class="title is-3">{% translate "Highlights & Videos" %}</h2>
+                        </div>                    
+                        {% include 'videos_skeleton.html' %}
+                </div>
+            </section>
+        {% endif %}
+
+
+        {% if page.applications.all %}
+            <section class="pb-6">
+                <div class="container">
+                    {% include 'applications_include.html' with applications=page.applications.all %}
+                </div>
+            </section>
+        {% endif %}
+    </main>
+
+{% endblock content %}
+
+
+{% block extra_js %}
+    {% if page.youtube_playlist %}
+        <script src="{% static 'js/jquery.scheletrone.js' %}"></script>
+    {% endif %}
+    <script>
+
+        const windowWidth = $(window).width();
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.service-rationale__toggle').forEach(function (button) {
+                const content = document.getElementById(button.getAttribute('aria-controls'));
+
+                if (!content) return;
+
+                button.addEventListener('click', function () {
+                    const isExpanded = button.getAttribute('aria-expanded') === 'true';
+                    button.setAttribute('aria-expanded', String(!isExpanded));
+                    content.hidden = isExpanded;
+                });
+            });
+
+            document.querySelectorAll('.ac-wrap').forEach(function (wrap) {
+                wrap.querySelectorAll('.ac-header').forEach(function (header) {
+                header.addEventListener('click', function () {
+                    const item = header.closest('.ac-item');
+                    const isOpen = item.classList.contains('ac-item--open');
+
+                    // close all items in this wrap
+                    wrap.querySelectorAll('.ac-item').forEach(function (i) {
+                    i.classList.remove('ac-item--open');
+                    });
+
+                    // open clicked if it was closed
+                    if (!isOpen) {
+                    item.classList.add('ac-item--open');
+                    }
+                });
+                });
+            });
+        });
+
+        const page_youtube_playlist = {{ page.youtube_playlist|yesno:'true,false' }};
+
+        $(document).ready(function () {
+            if (page_youtube_playlist) {
+                const url = "{{ youtube_playlist_url }}";
+                $('#videoWrapper').scheletrone({
+                    onComplete: function () {
+                        $.ajax({
+                            url: url,
+                            dataType: "html",
+                            success: function (data) {
+                                // if we have videos append them, else hide whole section
+                                if (data) {
+                                    $('#videoWrapper').html('').append(data).ready();
+                                } else {
+                                    $('#videoSection').remove()
+                                }
+                            },
+                            error: function () {
+                                $('#videoSection').remove()
+                            }
+                        });
+                    }
+                });
+            }
+        })
+
+    </script>
+
+{% endblock extra_js %}

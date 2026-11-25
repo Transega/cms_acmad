@@ -1,0 +1,188 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: nmhs-cms\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-11 07:46+0300\n"
+"PO-Revision-Date: 2026-04-13 13:25\n"
+"Last-Translator: \n"
+"Language-Team: Swahili\n"
+"Language: sw_KE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-File: /climweb/src/climweb/pages/organisation_pages/about/locale/en/LC_MESSAGES/django.po\n"
+"X-Crowdin-File-ID: 1420\n"
+"X-Crowdin-Language: sw\n"
+"X-Crowdin-Project: nmhs-cms\n"
+"X-Crowdin-Project-ID: 672958\n"
+
+#: climweb/src/climweb/pages/organisation_pages/about/blocks.py:14
+msgid ""
+"This can be the month of the year or the exact date. Leave blank if not "
+"known"
+msgstr ""
+"Hii inaweza kuwa mwezi wa mwaka au tarehe kamili. Acha wazi ikiwa "
+"haijulikani"
+
+#: climweb/src/climweb/pages/organisation_pages/about/blocks.py:16
+msgid "Describe the milestone"
+msgstr "Eleza hatua muhimu"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:22
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:23
+msgid "Organisation's mission"
+msgstr "Misheni ya shirika"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:24
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:25
+msgid "Organisation's vision"
+msgstr "Mtazamo wa shirika"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:27
+msgid "Timeline Heading"
+msgstr "Kichwa cha Rekodi ya Matukio"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:31
+msgid "Timeline items"
+msgstr "Vipengee vya ratiba"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:33
+msgid "Organisation's Structure Section Heading"
+msgstr "Kichwa cha Sehemu ya Muundo wa Shirika"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:34
+msgid "Organisation's Struture Heading"
+msgstr "Kichwa cha Muundo wa Shirika"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:36
+msgid "Organisation's Structure Description"
+msgstr "Maelezo ya Muundo wa Shirika"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:37
+msgid "Organisation's Struture Description"
+msgstr "Maelezo ya Muundo wa Shirika"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:41
+msgid "Organisational Structure Image"
+msgstr "Picha ya Muundo wa Shirika"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:42
+msgid "A high quality image related to your organisation's structure"
+msgstr "Picha ya ubora wa juu inayohusiana na muundo wa shirika lako"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:51
+msgid "Feature Block"
+msgstr "Kizuizi cha Kipengele"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:55
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:193
+msgid "Additional Materials"
+msgstr "Nyenzo za Ziada"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:64
+msgid "Accordion"
+msgstr "Accordion"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:68
+msgid "Bottom Call to action heading"
+msgstr "Wito wa chini kwa kichwa cha kitendo"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:70
+msgid "Bottom call to action description"
+msgstr "Maelezo ya mwito wa chini kwa hatua"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:72
+msgid "Bottom call to action button text"
+msgstr "Maandishi ya kitufe cha mwito wa chini kwa kitendo"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:79
+msgid "Bottom call to action button link"
+msgstr "Kiungo cha kitufe cha mwito wa chini kwa kitendo"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:89
+msgid "Mission & Vision Section"
+msgstr "Sehemu ya Dhamira na Maono"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:97
+msgid "Organisation Structure Section"
+msgstr "Sehemu ya Muundo wa Shirika"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:113
+msgid "Bottom Call to action Section"
+msgstr "Sehemu ya Chini ya Mwito wa Kitendo"
+
+#: climweb/src/climweb/pages/organisation_pages/about/models.py:118
+msgid "About Page"
+msgstr "Kuhusu Ukurasa"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:27
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:73
+msgid "Mission & Vision"
+msgstr "Dhamira na Maono"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:36
+#, fuzzy
+#| msgid " Organisational Structure"
+msgid "Organisational Structure"
+msgstr "Muundo wa Shirika"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:45
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:126
+msgid "History"
+msgstr "Historia"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:54
+msgid "Additional Information"
+msgstr "Taarifa za ziada"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:72
+msgid "Who We Are"
+msgstr "Sisi ni Nani"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:86
+msgid "Our Mission"
+msgstr "Dhamira Yetu"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:101
+msgid "Our Vision"
+msgstr "Maono Yetu"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:122
+#, fuzzy
+#| msgid "Our Partners"
+msgid "Our Journey"
+msgstr "Safari Yetu"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:192
+msgid "Resources"
+msgstr "Rasilimali"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:215
+msgid "Collaborators"
+msgstr "Washiriki"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:217
+msgid "Our Partners"
+msgstr "Washirika wetu"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:219
+msgid ""
+"Working alongside leading institutions to advance climate science and "
+"resilience."
+msgstr ""
+"Kufanya kazi pamoja na taasisi zinazoongoza ili kuendeleza sayansi ya hali "
+"ya hewa na ustahimilivu."
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:250
+msgid "More Partners"
+msgstr "Washirika Zaidi"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/about_page.html:272
+msgid "Get Involved"
+msgstr "Shiriki"
+
+#: climweb/src/climweb/pages/organisation_pages/about/templates/organisation_structure.html:27
+msgid "Structure"
+msgstr "Muundo"

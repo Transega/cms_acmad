@@ -1,0 +1,29 @@
+{% load wagtailcore_tags wagtailimages_tags %}
+
+{% if value.figure_type == "image" and value.image %}
+<div class="fb-row {% if is_even %}fb-row--flip{% endif %}">
+
+  <div class="fb-figure">
+    {% include 'streams/feature_block_figure_include.html' with value=value %}
+  </div>
+
+  <div class="fb-detail">
+    {% include 'streams/feature_block_detail_include.html' with value=value %}
+  </div>
+
+</div>
+{% elif value.figure_type == "video" %}
+  {% if value.video_url or value.action_link_external %}
+  <div class="fb-row {% if is_even %}fb-row--flip{% endif %}">
+
+    <div class="fb-figure">
+      {% include 'streams/feature_block_figure_include.html' with value=value %}
+    </div>
+
+    <div class="fb-detail">
+      {% include 'streams/feature_block_detail_include.html' with value=value %}
+    </div>
+
+  </div>
+  {% endif %}
+{% endif %}

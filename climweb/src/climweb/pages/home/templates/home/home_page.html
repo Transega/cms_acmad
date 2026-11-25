@@ -1,0 +1,472 @@
+{% extends "base.html" %}
+{% load static %}
+{% load wagtailcore_tags wagtailimages_tags lazyimages_tags nmhs_cms_tags i18n wagtailiconchooser_tags %}
+{% load vue_utils %}
+
+{% block body_class %}template-homepage{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/home.css' %}?v=4.9">
+    <link href="{% static 'css/hero.css' %}" type="text/css" rel="stylesheet"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/partners.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/project_detail.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/enso_feature.css' %}?v=6">
+    {% if IS_METEOROLOGICAL %}
+        {# met homepage redesign — card row + services strip styles #}
+        <link rel="stylesheet" href="{% static 'css/home_redesign.css' %}">
+        <link rel="stylesheet" href="{% static 'css/hero_product_widget.css' %}">
+        <link rel="stylesheet" href="{% static 'css/hero_updates_widget.css' %}?v=9">
+    {% endif %}
+    {% if page.show_weather_watch %}
+        {# map-only styles — loaded only when the weather watch map section is enabled #}
+        <link href='{% static "css/maplibre-gl.css" %}' rel='stylesheet'/>
+        {% if IS_METEOROLOGICAL %}
+            {# met mode uses the vanilla multi-hazard map card #}
+            <link rel="stylesheet" type="text/css" href="{% static 'css/multi_hazard_map.css' %}">
+        {% else %}
+            {# non-met mode uses the Vue home-map, which owns this control #}
+            <link rel="stylesheet" type="text/css" href="{% static 'css/zoom-to-location-control.css' %}">
+        {% endif %}
+    {% endif %}
+    {% if page.youtube_playlist %}
+        <link rel="stylesheet" type="text/css" href="{% static 'css/jquery.skeleton.css' %}">
+        <link rel="stylesheet" type="text/css" href="{% static 'css/video_include.css' %}">
+    {% endif %}
+
+    <link rel="stylesheet" href="{% static 'css/glide.core.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/glide.theme.min.css' %}">
+
+    {% if IS_METEOROLOGICAL %}
+    <link rel="stylesheet" href="{% static 'weather/css/forecast_widget.css' %}">
+    {% endif %}
+{% endblock extra_css %}
+
+{% block content %}
+    <div class="home-hero-wrapper">
+        {% include 'home/section/hero_include.html' %}
+    </div>
+    <main class="is-index">
+        {% if IS_METEOROLOGICAL %}
+        {% include 'home/section/met_cards_section.html' %}
+        {% endif %}
+
+        {% if not IS_METEOROLOGICAL %}
+            {# in met mode these are replaced by the services strip and the
+               latest-updates card inside met_cards_section.html #}
+            {% include 'home/section/services_include.html' %}
+            {% include 'home/section/updates_include.html' %}
+        {% endif %}
+
+        {% include 'home/section/summer_school_include.html' %}
+
+        {% if page.youtube_playlist %}
+            <section class="section videos" id="videoSection">
+                <div class="container is-align-content-center">
+                    <div class="my-6">
+                        <p class="is-uppercase has-text-weight-bold is-size-8 mb-1" style="color:var(--primary-color); letter-spacing:0.08em;">
+                            {% translate "Latest Media" %}
+                        </p>
+                        <h2 class="title is-3">{% translate "Highlights & Videos" %}</h2>
+                        </div>                    
+                        {% include 'videos_skeleton.html' %}
+                </div>
+            </section>
+        {% endif %}
+
+       {% if page.feature_block %}
+        <section class="section">
+        <div class="container">
+            <div class="feature-blocks">
+            {% for block in page.feature_block %}
+                {% include_block block with is_even=forloop.counter0|divisibleby:2 %}
+            {% endfor %}
+            </div>
+        </div>
+        </section>
+        {% endif %}
+        
+ 
+        {% if page.partners %}
+            <section class="section" id="partners">
+            <div class="container py-5">
+
+                <div class="mb-5">
+                <p class="is-uppercase has-text-weight-bold is-size-8 mb-1"
+                    style="color:var(--primary-color) ; letter-spacing:0.08em;">
+                    {% translate "Collaborators" %}
+                </p>
+                <h2 class="title is-3">{% translate "Our Partners" %}</h2>
+                <p class="subtitle is-6 has-text-grey">
+                    {% translate "Working alongside leading institutions to advance climate science and resilience." %}
+                </p>
+                </div>
+
+                <div class="columns is-multiline is-mobile is-centered partners-list">
+                {% for partner in page.partners %}
+                    {% if partner.visible_on_homepage and partner.logo %}
+                    <div class="column is-4-mobile is-3-tablet is-2-desktop">
+                        <a href="{% if partner.link %}{{ partner.link }}{% endif %}"
+                        target="{% if partner.link %}_blank{% else %}_self{% endif %}"
+                        rel="noopener"
+                        class="partner-card"
+                        title="{{ partner.name }}">
+                        <figure class="image partner-logo-figure">
+                            {% image partner.logo original as p_logo %}
+                            <img class="progressive__img progressive--not-loaded partner-logo-img"
+                                data-progressive="{{ p_logo.url }}"
+                                src="{% lazy_image_url p_logo %}"
+                                alt="{{ partner.name }}" />
+                        </figure>
+                        <span class="partner-name">{{ partner.name }}</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                </div>
+
+                {% if settings.base.ImportantPages.all_partners_page %}
+                <div class="has-text-centered mt-5">
+                    <a class="more-partners button is-primary" href="{{ settings.base.ImportantPages.all_partners_page.url }}">
+                        {% translate "View More Partners" %}
+                    </a>
+                </div>
+                {% endif %}
+
+            </div>
+            </section>
+        {% endif %}
+    </main>
+{% endblock content %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="{% static 'js/bulmahead.js' %}"></script>
+    {% if page.show_weather_watch %}
+        {# map-only scripts — loaded only when the weather watch map section is enabled #}
+        {% if IS_METEOROLOGICAL %}
+            {# met mode: vanilla maplibre multi-hazard map card #}
+            <script defer src="{% static 'js/maplibre-gl.js' %}"></script>
+            <script defer src="{% static 'js/multi_hazard_map.js' %}?v={% now 'U' %}"></script>
+        {% else %}
+            {# non-met mode: Vue home-map bundle and its helpers #}
+            <script src="{% static 'js/maplibre-gl.js' %}"></script>
+            <script src="{% static 'js/turf.min.js' %}"></script>
+            <script type="text/javascript" src="{% static 'js/zoom-to-location-control.js' %}"></script>
+            <script type="module" crossorigin src="{% vue_bundle_url 'home-map' %}"></script>
+        {% endif %}
+    {% endif %}
+
+    {% if page.youtube_playlist %}
+        <script src="{% static 'js/jquery.scheletrone.js' %}"></script>
+    {% endif %}
+
+    <script type="text/javascript" src="{% static 'js/glide.min.js' %}"></script>
+
+    <script>
+    const homeMapSettingsUrl    = "{{ home_map_settings_url|default_if_none:'' }}";
+    const homeWeatherWidgetUrl  = "{{ home_weather_widget_url|default_if_none:'' }}";
+    const page_youtube_playlist = {{ page.youtube_playlist|yesno:'true,false' }};
+    const citySearchUrl         = "{{ city_search_url }}";
+    const cityDetailUrl         = "{{ city_detail_page_url|default_if_none:'' }}";
+    const countryBounds         = {{ country_bounds|default_if_none:'[]' }};
+
+    /* ── safe translation helper ── */
+    const _t = (str) => (typeof gettext === 'function' ? gettext(str) : str);
+
+    const weatherWidgetWrapper = $("#weather-widget-wrapper");
+
+    let singleForecastSlider;
+
+    /* ── city select callback — triggers a full widget re-render ── */
+    const onSelectCity = ({ label, value }) => {
+      renderWeatherWidgetForCity(value);
+    };
+
+    /* ── no-data state — preserves the topbar if possible ── */
+    const showNoData = (message, description) => {
+      const noDataHtml = `
+        <div class="cf-no-data">
+          <div class="cf-no-data-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" width="24" height="24">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <p class="cf-no-data-title">${message}</p>
+          <p class="cf-no-data-desc">${description}</p>
+        </div>`;
+
+      /* 1. single slider — replace the panel area only */
+      const $panel = weatherWidgetWrapper.find('.cf-panel');
+      if ($panel.length) {
+        $panel.html(noDataHtml);
+        return;
+      }
+
+      /* 2. multiple slider — replace tabs-content area only */
+      const $tabsContent = weatherWidgetWrapper.find('.tabs-content');
+      if ($tabsContent.length) {
+        weatherWidgetWrapper.find('.cf-no-data').remove();
+        $tabsContent.html(noDataHtml);
+        return;
+      }
+
+      /* 3. topbar exists but no known content area — insert after topbar */
+      const $topbar = weatherWidgetWrapper.find('.cf-top-bar');
+      if ($topbar.length) {
+        weatherWidgetWrapper.find('.cf-no-data').remove();
+        $topbar.after(noDataHtml);
+        return;
+      }
+
+      /* 4. wrapper has children but no recognisable structure — append */
+      if (weatherWidgetWrapper.children().length > 0) {
+        weatherWidgetWrapper.find('.cf-no-data').remove();
+        weatherWidgetWrapper.append(noDataHtml);
+        return;
+      }
+
+      /* 5. wrapper is completely empty — build a minimal card */
+      weatherWidgetWrapper.html(`
+        <div class="cf-card">
+          <div class="cf-top-bar">
+            <div class="cf-top-left">
+              <span class="cf-city-name">${_t('Forecast')}</span>
+            </div>
+          </div>
+          ${noDataHtml}
+        </div>`);
+    };
+
+    /* ── slider + search init (shared by SSR and AJAX paths) ── */
+    const initWeatherWidget = (citySlug) => {
+      const loader           = $('#weather-widget-loader');
+      const forecastSkeleton = $('.forecast-widget-skeleton');
+
+      /* ── SINGLE SLIDER (daily) ── */
+      const $single = $('#single-forecast-slider');
+      if ($single.length) {
+
+        function getSinglePerView(w) {
+          if (w < 320) return 1;
+          if (w < 480) return 2;
+          if (w < 640) return 3;
+          if (w < 900) return 4;
+          return 5;
+        }
+
+        const container    = $single.closest('.cf-card')[0] || $single[0];
+        let currentPerView = getSinglePerView(
+          container ? container.offsetWidth : window.innerWidth
+        );
+
+        singleForecastSlider = new Glide('#single-forecast-slider', {
+          type: 'slider', perView: currentPerView,
+          gap: 8, bound: true, rewind: false, breakpoints: {},
+        }).mount();
+
+        if (window.ResizeObserver && container) {
+          window._singleSliderRO = new ResizeObserver(entries => {
+            if (!singleForecastSlider) {
+              window._singleSliderRO.disconnect();
+              window._singleSliderRO = null;
+              return;
+            }
+            const next = getSinglePerView(entries[0].contentRect.width);
+            if (next !== currentPerView) {
+              currentPerView = next;
+              try { singleForecastSlider.update({ perView: next }); } catch (e) {}
+            }
+          });
+          window._singleSliderRO.observe(container);
+        }
+
+        /* city search for single slider */
+        if (typeof bulmaHead === 'function') {
+          bulmaHead('city-search', 'city-search-menu',
+            name => fetch(citySearchUrl + '?name=' + encodeURIComponent(name))
+              .then(r => r.json())
+              .then(d => d.map(c => ({ label: c.name, value: c.slug }))),
+            onSelectCity, 200, 0
+          );
+        }
+
+      /* ── MULTIPLE SLIDER (hourly tabs) ── */
+      } else if ($('.day-forecast-slider').length > 0) {
+
+        if (typeof window.initMultiWidget === 'function') {
+          window.initMultiWidget({
+            citySearchUrl: citySearchUrl,
+            onCitySelect:  onSelectCity,
+          });
+        }
+
+      /* ── NEITHER slider found after a city search = no data ── */
+      } else if (citySlug) {
+        showNoData(
+          _t('No forecast data available'),
+          _t('We could not find forecast data for the selected location. Please try a different city.')
+        );
+      }
+
+      if (loader.length) loader.removeClass('is-active');
+      if (forecastSkeleton.length) forecastSkeleton.hide();
+    };
+
+    /* ── main render ── */
+    const renderWeatherWidgetForCity = (citySlug) => {
+
+      let url = homeWeatherWidgetUrl;
+      if (citySlug) url = url + '?city=' + citySlug;
+
+      const loader           = $('#weather-widget-loader');
+      const forecastSkeleton = $('.forecast-widget-skeleton');
+
+      if (loader.length) loader.addClass('is-active');
+
+      /* clean up previous single slider */
+      if (singleForecastSlider) {
+        singleForecastSlider.destroy();
+        singleForecastSlider = null;
+      }
+
+      if (window._singleSliderRO) {
+        window._singleSliderRO.disconnect();
+        window._singleSliderRO = null;
+      }
+
+      fetch(url)
+        .then(response => {
+          if (!response.ok) throw new Error('Error fetching weather widget data');
+          return response.text();
+        })
+        .then(data => {
+
+          /* detect whether the response contains a usable widget */
+          const $parsed   = $(data);
+          const hasWidget = $parsed.find('#single-forecast-slider').length > 0
+                         || $parsed.find('.day-forecast-slider').length   > 0
+                         || $parsed.find('.forecast-widget').length        > 0
+                         || $parsed.find('.cf-top-bar').length             > 0;
+
+          if (!hasWidget) {
+            if (citySlug) {
+              showNoData(
+                _t('No forecast data available'),
+                _t('We could not find forecast data for the selected location. Please try a different city.')
+              );
+            } else {
+              weatherWidgetWrapper.parent().hide();
+            }
+            if (loader.length) loader.removeClass('is-active');
+            if (forecastSkeleton.length) forecastSkeleton.hide();
+            return;
+          }
+
+          /* inject */
+          weatherWidgetWrapper.html(data);
+          initWeatherWidget(citySlug);
+
+        })
+        .catch(error => {
+          console.error('HOME_WEATHER_WIDGET_ERROR:', error);
+          if (citySlug) {
+            showNoData(
+              _t('Could not load forecast'),
+              _t('There was a problem loading the forecast. Please try again.')
+            );
+          }
+          if (loader.length) loader.removeClass('is-active');
+          if (forecastSkeleton.length) forecastSkeleton.hide();
+        });
+    };
+
+    /* ── boot ── */
+    $(document).ready(function () {
+
+      const heroProductCarousel = document.getElementById('hero-updates-carousel');
+      if (heroProductCarousel && typeof Glide !== 'undefined') {
+        const slideCount = heroProductCarousel.querySelectorAll('.glide__slide').length;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        window.heroProductGlide = new Glide('#hero-updates-carousel', {
+          type: 'slider',
+          perView: 1,
+          gap: 0,
+          rewind: true,
+          autoplay: !reduceMotion && slideCount > 1 ? 7500 : false,
+          hoverpause: false,
+          animationDuration: reduceMotion ? 0 : 550,
+          swipeThreshold: 60,
+          dragThreshold: 80,
+        });
+
+        const syncHeroProductAccessibility = () => {
+          heroProductCarousel.querySelectorAll('.glide__slide').forEach((slide, index) => {
+            const active = index === window.heroProductGlide.index;
+            slide.setAttribute('aria-hidden', active ? 'false' : 'true');
+            slide.querySelectorAll('a, button').forEach(control => {
+              control.tabIndex = active ? 0 : -1;
+            });
+          });
+          heroProductCarousel.querySelectorAll('.hero-product-dots button').forEach((dot, index) => {
+            dot.setAttribute('aria-current', index === window.heroProductGlide.index ? 'true' : 'false');
+          });
+        };
+
+        window.heroProductGlide.on(['mount.after', 'run.after'], syncHeroProductAccessibility);
+        window.heroProductGlide.mount();
+        syncHeroProductAccessibility();
+
+        const syncPlayback = () => {
+          if (reduceMotion || document.hidden || heroProductCarousel.matches(':hover') || heroProductCarousel.contains(document.activeElement)) {
+            window.heroProductGlide.pause();
+          } else if (slideCount > 1) {
+            window.heroProductGlide.play(7500);
+          }
+        };
+        heroProductCarousel.addEventListener('focusin', syncPlayback);
+        heroProductCarousel.addEventListener('focusout', () => setTimeout(syncPlayback, 0));
+        heroProductCarousel.addEventListener('mouseenter', syncPlayback);
+        heroProductCarousel.addEventListener('mouseleave', syncPlayback);
+        document.addEventListener('visibilitychange', syncPlayback);
+        syncPlayback();
+      }
+
+      const isSsrRendered = weatherWidgetWrapper.length
+        && weatherWidgetWrapper.children().length > 0
+        && !$('.forecast-widget-skeleton').length;
+
+      if (isSsrRendered) {
+        initWeatherWidget(null);
+      } else if (weatherWidgetWrapper.length && homeWeatherWidgetUrl) {
+        renderWeatherWidgetForCity();
+      } else {
+        const forecastSkeleton = $('.forecast-widget-skeleton');
+        if (forecastSkeleton.length) forecastSkeleton.hide();
+      }
+
+      if (page_youtube_playlist) {
+        const url        = "{{ youtube_playlist_url }}";
+        const $videoWrap = $('#videoWrapper');
+        if ($videoWrap.length) {
+          $videoWrap.scheletrone({
+            onComplete: function () {
+              $.ajax({
+                url,
+                dataType: 'html',
+                success: function (data) {
+                  if (data) { $('#videoWrapper').html('').append(data).ready(); }
+                  else      { $('#videoSection').remove(); }
+                },
+                error: function () { $('#videoSection').remove(); },
+              });
+            },
+          });
+        }
+      }
+
+    });
+    </script>
+{% endblock %}

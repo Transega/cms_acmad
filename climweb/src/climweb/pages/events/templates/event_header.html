@@ -1,0 +1,98 @@
+{% load wagtailcore_tags wagtailimages_tags static i18n wagtailiconchooser_tags get_share_url %}
+
+<header class="ev-header">
+    <div class="ev-badge-row">
+        {% if page.event_type %}
+            <span class="ev-type-badge">
+                <span class="icon ev-badge-icon">
+                    {% if page.event_type.icon %}
+                        {% svg_icon page.event_type.icon %}
+                    {% else %}
+                        {% svg_icon name="tag" %}
+                    {% endif %}
+                </span>
+                <span>{{ page.event_type.event_type }}</span>
+            </span>
+        {% endif %}
+
+        {% if page.attendance_mode == "online" or page.attendance_mode == "hybrid" %}
+            <span class="ev-type-badge">
+                <span class="icon ev-badge-icon">{% svg_icon name="desktop" %}</span>
+                <span>{{ page.get_attendance_mode_display }}</span>
+            </span>
+        {% endif %}
+
+        {% if page.is_ended %}
+            <span class="ev-status-badge ev-status-badge--ended">
+                <span class="icon ev-badge-icon">
+                    {% svg_icon name="box-archive" %}
+                </span>
+                <span>{% translate "Ended" %}</span>
+            </span>
+        {% elif page.count_down %}
+            <span class="ev-status-badge ev-status-badge--countdown">
+                <span class="icon ev-badge-icon">
+                    {% svg_icon name="hourglass-half" %}
+                </span>
+                <span>
+                    {% blocktranslate count counter=page.count_down trimmed %}
+                        Starts in {{ counter }} day
+                    {% plural %}
+                        Starts in {{ counter }} days
+                    {% endblocktranslate %}
+                </span>
+            </span>
+        {% elif page.registration_open %}
+            <span class="ev-status-badge ev-status-badge--open">
+                <span class="icon ev-badge-icon">
+                    {% svg_icon name="circle-check" %}
+                </span>
+                <span>{% translate "Registration Open" %}</span>
+            </span>
+        {% endif %}
+
+        {% for cat in page.category.all %}
+            <span class="ev-category-pill">{{ cat.name }}</span>
+        {% endfor %}
+    </div>
+
+    <h1 class="ev-title">{{ page.title }}</h1>
+
+    <div class="ev-meta-bar">
+        <div class="ev-meta-pills">
+            <div class="ev-meta-pill">
+                <span class="icon ev-meta-icon">{% svg_icon name="calendar-alt" %}</span>
+                <span class="ev-meta-text">
+                    {{ page.date_from|date:"d M Y" }}{% if page.date_to and page.date_to|date:"Y-m-d" != page.date_from|date:"Y-m-d" %} – {{ page.date_to|date:"d M Y" }}{% endif %}
+                </span>
+            </div>
+
+            <div class="ev-meta-pill">
+                <span class="icon ev-meta-icon">{% svg_icon name="time" %}</span>
+                <span class="ev-meta-text">
+                    {{ page.date_from|date:"h:i A" }}{% if page.date_to %} – {{ page.date_to|date:"h:i A" }}{% endif %}
+                    {% if page.tz_gmt_offset %}<span class="ev-meta-subtext">({{ page.tz_gmt_offset }})</span>{% endif %}
+                </span>
+            </div>
+
+            {% if page.location %}
+                <div class="ev-meta-pill">
+                    <span class="icon ev-meta-icon">{% svg_icon name="location" %}</span>
+                    <span class="ev-meta-text">{{ page.location }}</span>
+                </div>
+            {% endif %}
+
+            {% if page.cost %}
+                <div class="ev-meta-pill">
+                    <span class="icon ev-meta-icon">{% svg_icon name="wallet" %}</span>
+                    <span class="ev-meta-text">{{ page.cost }}</span>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="ev-meta-share share-buttons">
+            <span class="ev-share-label">{% translate "Share" %}:</span>
+            {% share_buttons url=page.get_full_url text=page.title %}
+        </div>
+    </div>
+</header>

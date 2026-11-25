@@ -1,0 +1,217 @@
+{% load static i18n wagtailsettings_tags nmhs_cms_tags wagtailmetadata_tags %}
+{% load wagtailuserbar wagtailadmin_tags wagtailcore_tags %}
+{% get_settings use_default_site=True %}
+{% wagtail_site as current_site %}
+
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+
+<!DOCTYPE html>
+<html lang="{{ settings.base.LanguageSettings.default_language }}" 
+      dir="{% if settings.base.LanguageSettings.default_language|slice:":2" == "ar" %}rtl{% else %}ltr{% endif %}">
+    <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    {% if settings.base.IntegrationSettings.google_site_verification_key %}
+        <meta name="google-site-verification"
+              content="{{ settings.base.IntegrationSettings.google_site_verification_key }}"/>
+    {% endif %}
+    {% block page_meta %}
+        {% if page.get_meta_title %}
+            {% meta_tags %}
+        {% else %}
+            {% comment %}
+                Page has no SEO/meta title (or this is not a page at all) —
+                still give the browser tab a meaningful name: the page title,
+                when there is one, followed by the organisation name from
+                Settings > Organisation, falling back to the Wagtail site name.
+            {% endcomment %}
+            {% firstof settings.base.OrganisationSetting.name current_site.site_name 'WAGTAIL_SITE_NAME'|django_settings as site_brand %}
+            <title>{% block title %}{% if page.title and site_brand %}{{ page.title }} — {{ site_brand }}{% elif page.title %}{{ page.title }}{% else %}{{ site_brand }}{% endif %}{% endblock %}</title>
+        {% endif %}
+    {% endblock %}
+
+    {% block favicon %}
+        {# See https://developer.apple.com/design/human-interface-guidelines/ios/icons-and-images/app-icon/ #}
+        {% if settings.base.OrganisationSetting.favicon %}
+            {% include 'favicon_include.html' with favicon_image=settings.base.OrganisationSetting.favicon %}
+        {% elif settings.base.OrganisationSetting.logo %}
+            {# No dedicated favicon uploaded — fall back to the organisation logo. #}
+            {% include 'favicon_include.html' with favicon_image=settings.base.OrganisationSetting.logo %}
+        {% endif %}
+    {% endblock %}
+
+    <!--Force all links in the live preview panel to be opened in a new tab -->
+    {% if request.in_preview_panel %}
+        <base target="_blank" rel="noopener noreferrer">
+    {% endif %}
+
+    
+    <link rel="stylesheet" type="text/css" href="{% static 'css/bulma.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/rtl-bulma-overrides.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/bulma-divider.min.css' %}">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Noto+Sans+Arabic:wght@400;600;700&family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/animate.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/google-translate.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/navigation.css' %}?v=3.1">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/faq-panel.css' %}?v=1.0">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/cms_style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/base.css' %}?v=2.0">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/components.css' %}?v=2.1">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/footer.css' %}?v=2.0">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sections.css' %}">
+    <link rel="stylesheet" href="{% static 'css/services_common.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/nmhs_cms.css' %}?v=2.0">
+
+    {# Global stylesheets #}
+    <style>
+        :root {
+            --navy-950: {{ theme_tokens.navy_950 }};
+            --navy-900: {{ theme_tokens.navy_900 }};
+            --navy-800: {{ theme_tokens.navy_800 }};
+            --green-700: {{ theme_tokens.green_700 }};
+            --green-600: {{ theme_tokens.green_600 }};
+            --green-100: {{ theme_tokens.green_100 }};
+            --yellow-400: {{ theme_tokens.yellow_400 }};
+            --yellow-300: {{ theme_tokens.yellow_300 }};
+            --blue-100: {{ theme_tokens.blue_100 }};
+            --sand-50: {{ theme_tokens.sand_50 }};
+            --white: {{ theme_tokens.white }};
+            --ink: {{ theme_tokens.ink }};
+            --muted: {{ theme_tokens.muted }};
+            --line: {{ theme_tokens.line }};
+            --danger: {{ theme_tokens.danger }};
+            --shadow-sm: {{ theme_tokens.shadow_sm }};
+            --shadow-lg: {{ theme_tokens.shadow_lg }};
+            --theme-font-body: {{ theme_tokens.body_font|safe }};
+            --theme-font-heading: {{ theme_tokens.heading_font|safe }};
+            --theme-header-dark: var(--navy-950);
+            --theme-heading: var(--navy-900);
+            --theme-primary: var(--green-700);
+            --theme-primary-hover: var(--green-600);
+            --theme-accent: var(--yellow-400);
+            --theme-page-background: var(--sand-50);
+            --theme-surface: var(--white);
+            --theme-text: var(--ink);
+            --theme-muted: var(--muted);
+            --theme-border: var(--line);
+            --text-color: {{ text_color }};
+            --text-color-background: {{ text_color }}25;
+            --background-color: {{ background_color }};
+            --secondary-color: {{ secondary_color }};
+            --primary-color-lightest: {{ primary_color }}0d; 
+            --primary-color-light: {{ primary_color }}1A; 
+            --primary-color-medium: {{ primary_color }}4f; 
+            --border-radius: {{ border_radius }};
+            --primary-color: {{ primary_color }};
+        }
+
+        {% if settings.base.LanguageSettings.default_language|slice:":2" == "ar" %}
+            .title is-3{
+                text-align:right !important;
+            }
+            h1,h2,h3,h4,h5,p{
+                text-align:right !important;
+            }
+
+            .table th {
+                text-align: right !important;
+            }
+
+            .has-text-left{
+                text-align: right !important;
+            }
+}
+        
+        {% endif %}
+
+    </style>
+    <script type="text/javascript" src="{% static 'js/jquery-3.6.3.min.js' %}"></script>
+    {% if request.user.is_authenticated or request.is_preview %} {% else %}
+        {% if settings.base.IntegrationSettings.ga_tracking_id %}
+            <!-- Global site tag (gtag.js) - Google Analytics -->
+            <script async
+                    src="https://www.googletagmanager.com/gtag/js?id={{ settings.base.IntegrationSettings.ga_tracking_id }}"></script>
+            <script>
+                window.dataLayer = window.dataLayer || [];
+
+                function gtag() {
+                    dataLayer.push(arguments);
+                }
+
+                gtag('js', new Date());
+
+                gtag('config', '{{settings.base.IntegrationSettings.ga_tracking_id}}');
+            </script>
+        {% endif %}
+    {% endif %}
+
+    {% block extra_css %}
+        {# Override this in templates to add extra stylesheets #}
+    {% endblock %}
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+{% wagtailuserbar %}
+
+{% block navbar %}
+    {% include 'navigation/navbar.html' %}
+{% endblock navbar %}
+
+<div class="page-container is-medium">
+    {% block content %}{% endblock %}
+    {% block footer %}
+        {% include 'navigation/footer.html' %}
+    {% endblock %}
+</div>
+
+<!-- Global javascript -->
+
+<script type="text/javascript" src="{% static 'js/common_cms.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/faq-panel.js' %}"></script>
+
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+<script type="text/javascript" src="{% static 'js/progressively.js' %}"></script>
+<script>
+    function googleTranslateElementInit() {
+        new google.translate.TranslateElement(
+            {
+                pageLanguage: "{{settings.base.LanguageSettings.default_language}}",
+                includedLanguages: "{{settings.base.LanguageSettings.included_languages|join:"," }}",
+                layout: google.translate.TranslateElement.InlineLayout.HORIZONTAL,
+                autoDisplay: false
+            },
+            "google_language_translator"
+        );
+    }
+</script>
+<script src="{% static 'js/google-translate.js' %}"></script>
+<script type="text/javascript">
+    progressively.init()
+</script>
+
+<script src="{% static 'js/bulma-toast.min.js' %}"></script>
+
+<script>
+    bulmaToast.setDefaults({
+        duration: 2500,
+        position: 'top-center',
+        closeOnClick: true,
+    })
+    {% if messages %}
+        {% for message in messages %}
+            const level = {{ message.level }}
+            const type = level === 25 ? "is-success" : level === 30 ? "is-warning" : level === 40 ? "is-error" : "is-info"
+            bulmaToast.toast({message: "{{ message }}", type: type})
+        {% endfor %}
+    {% endif %}
+</script>
+
+{% block extra_js %}
+    {# Override this in templates to add extra javascript #}
+{% endblock %}
+</body>
+</html>
